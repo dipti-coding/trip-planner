@@ -1,4 +1,4 @@
-# Trip Planner — Product Roadmap
+# Trip Planner — Technical Roadmap
 
 ## Tech Stack
 
