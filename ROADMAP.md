@@ -56,17 +56,17 @@ A locally running FastAPI with auth, user profile, trip creation, and empty plan
 
 ---
 
-## Week 2 — AI Parsing + Plan Management
+## Week 2 — Booking Text Parsing + Plan Management
 
 **Goal:** Users can paste booking text and have it parsed into structured plans on a trip.
 
 ### Backend
-- [ ] Integrate Claude API (`anthropic` Python SDK)
+- [ ] Integrate text parsing library
 - [ ] Build `POST /trips/{trip_id}/plans/parse` endpoint
   - Accepts raw pasted text
-  - Sends to Claude with a structured prompt to extract: plan type, title, dates/times, confirmation numbers, location, relevant details
+  - Sends to parsing library to extract plan type, title, dates/times, confirmation numbers, location, relevant details
   - Returns structured plan JSON and persists to DB
-- [ ] Claude system prompt handles all 13 plan types with consistent output schema
+- [ ] The library returns a consistent schema to be add to a specific plan type.
 - [ ] Build `POST /trips/{trip_id}/plans` for manual plan creation (non-parsed)
 - [ ] Plan `details` field uses JSONB to store type-specific fields (e.g. flight: airline, flight number, seat; hotel: check-in, check-out, room type)
 - [ ] Input validation and graceful error handling if Claude cannot parse the text
@@ -142,45 +142,12 @@ The paste-box feature (Week 2) requires extracting structured data from unstruct
 
 | Option | Cost | Reliability | Maintenance | Decision |
 |---|---|---|---|---|
-| **Claude API (Sonnet)** | ~$0.003/call | High | None | **Selected for MVP** |
+| Claude API (Sonnet) | ~$0.003/call | High | None | To be considered based on cost |
 | Gemini API | Free tier available | High | None | Valid swap if cost is a concern |
 | TripIt API | Paid | Very high | None | Post-MVP — email forwarding only, not paste-box |
 | Regex / rule-based | Free | Low | High | Avoided — breaks when providers change templates |
 | spaCy / NLTK | Free | Medium | Medium | Useful as supplement only — no booking context awareness |
 | Ollama (local LLM) | Server cost | Medium | Medium | Post-MVP at scale — adds infrastructure complexity |
-
-**Why Claude API for MVP:** Handles any booking format without maintaining provider-specific patterns. At MVP volume, cost is negligible. A per-user daily rate limit on `/parse` caps any runaway spend.
-
-**Migration path:** If inbound email parsing ships (Post-MVP #6), **TripIt API** becomes the strongest swap — purpose-built for travel confirmations and handles hundreds of providers with high accuracy.
-
-### Claude API Cost Analysis
-
-Pricing based on Claude Sonnet (recommended model for this use case):
-- Input: $3.00 per million tokens
-- Output: $15.00 per million tokens
-
-**Per parse call estimate:**
-
-| Token type | Estimated tokens | Cost |
-|---|---|---|
-| Input (system prompt + pasted text) | ~800 tokens | ~$0.0024 |
-| Output (structured plan JSON) | ~300 tokens | ~$0.0045 |
-| **Total per call** | | **~$0.007** |
-
-**Monthly cost at scale:**
-
-| Active users | Avg parses/user/month | Total calls | Est. monthly cost |
-|---|---|---|---|
-| 100 | 10 | 1,000 | ~$7 |
-| 1,000 | 10 | 10,000 | ~$70 |
-| 10,000 | 10 | 100,000 | ~$700 |
-
-**Cost controls to implement in Week 4:**
-- Rate limit: 10 parses per user per day (prevents abuse)
-- Prompt caching: cache the system prompt portion via Claude's prompt caching feature — system prompt is reused on every call and can be cached, reducing input token cost by ~90% on the cached portion
-- Set a hard monthly spend cap in the Anthropic console
-
-**Break-even vs TripIt API:** TripIt's API starts at ~$299/month flat. Claude API becomes more expensive than TripIt only beyond ~40,000 parse calls/month (~4,000 active users parsing 10x/month), making Claude the right choice through early growth.
 
 ---
 
