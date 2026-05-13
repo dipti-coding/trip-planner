@@ -8,7 +8,7 @@
 | Backend | FastAPI (Python) |
 | Database | PostgreSQL (Supabase hosted) |
 | Auth | Supabase Auth |
-| Booking Text Parsing | To be decided |
+| Booking Text Parsing | External library or in-house parsing logic |
 | Outbound Email | Resend |
 | File Storage | Supabase Storage |
 | Deployment | Railway (FastAPI) + Expo EAS (mobile) |
@@ -135,21 +135,6 @@ MVP live on TestFlight. Full flow: sign up → create trip → paste confirmatio
 
 ---
 
-## Booking Confirmation Parsing — Options Considered
-
-The paste-box feature (Week 2) requires extracting structured data from unstructured booking text. Booking confirmations have no standard format — a United Airlines confirmation looks completely different from a Delta one, and Marriott looks nothing like Airbnb. Options evaluated:
-
-| Option | Cost | Reliability | Maintenance | Decision |
-|---|---|---|---|---|
-| Claude API (Sonnet) | ~$0.003/call | High | None | To be considered based on cost |
-| Gemini API | Free tier available | High | None | Valid swap if cost is a concern |
-| TripIt API | Paid | Very high | None | Post-MVP — email forwarding only, not paste-box |
-| Regex / rule-based | Free | Low | High | Avoided — breaks when providers change templates |
-| spaCy / NLTK | Free | Medium | Medium | Useful as supplement only — no booking context awareness |
-| Ollama (local LLM) | Server cost | Medium | Medium | Post-MVP at scale — adds infrastructure complexity |
-
----
-
 ## Post-MVP Backlog
 
 | # | Feature | Notes |
@@ -160,3 +145,5 @@ The paste-box feature (Week 2) requires extracting structured data from unstruct
 | 4 | **Plan recommendations based on empty time slots** | Detect empty time slots in trip → Suggests Breakfast, Lunch, Dinner, or activities based on destination and preferences |
 | 5 | **Transit directions** | Public transportation options from current location to plan location (Google Maps Directions API) |
 | 6 | **Inbound email parsing** | Users forward booking emails to `trips@yourdomain.com` → Mailgun Inbound webhook → Parsing library parses → plan created automatically |
+
+
