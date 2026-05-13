@@ -17,18 +17,18 @@ Trip Planner is a mobile app that helps travelers organize itineraries around th
 - Give travelers a single place to store flights, hotels, and activities for a trip
 - Reduce manual data entry by parsing booking confirmation text into structured plans
 - Surface relevant weather context alongside plans
-- Enable frictionless sharing of itineraries with travel companions
+- Trip PDF export
 
 ---
 
-## 3. Non-Goals (MVP)
+## 3. Non-Goals (Post-MVP)
 
-- Real-time collaborative editing (post-MVP)
-- Google Maps nearby-places integration (post-MVP)
-- PDF export (post-MVP)
-- AI-suggested plans for empty time slots (post-MVP)
-- Public transit routing (post-MVP)
-- Email-to-plan parsing (post-MVP)
+- Real-time collaborative editing
+- Google Maps nearby-places integration
+- Enable frictionless sharing of itineraries with travel companions
+- AI-suggested plans for empty time slots
+- Public transit routing
+- Email-to-plan parsing
 
 ---
 
@@ -90,45 +90,17 @@ Type-specific fields listed below.
 | I3 | As a user, I can delete a plan | Deletion requires confirmation |
 | I4 | As a user, I see a live weather icon next to each plan | Icon reflects current weather conditions at the plan's location on the plan's date/time |
 
-### 4.6 Sharing
+### 4.6 Trip PDF Export
 
 | ID | Story | Acceptance Criteria |
 |----|-------|---------------------|
-| S1 | As a user, I can share a trip itinerary via email | Input: recipient email address |
-| S2 | Recipient receives a link to a read-only view of the itinerary | No account required to view; link does not allow editing |
-| S3 | Read-only view shows all plans with all fields | Weather icons included in read-only view |
-| S4 | Trip owner can revoke shared access | Link becomes invalid after revocation |
+| S1 | As a user, I can click on the Export Button to down a PDF file with the trip and its associated plans |
+| S2 | Read-only view shows all plans with all fields | Weather icons included in read-only view |
 
 ---
+## 5. Functional Requirements
 
-## 5. Data Model (Logical)
-
-```
-User
-  id, email, home_city, created_at
-  preferences: [activity_type]
-
-Trip
-  id (public trip ID), owner_user_id
-  name, destination_city, start_date, end_date
-  share_token (nullable), share_revoked_at (nullable)
-  created_at, updated_at
-
-Plan
-  id, trip_id
-  type (enum: Activity | Restaurant | Meeting | Flight | Hotel | Tour |
-              CarReservation | Cruise | Ferry | MapDestination |
-              RailwayRide | BusRide | LocalEvent)
-  name, date, start_time, end_time, location, notes
-  type_specific_fields (JSON)
-  created_at, updated_at
-```
-
----
-
-## 6. Functional Requirements
-
-### 6.1 Booking Text Parser
+### 5.1 Booking Text Parser
 
 - Accepts free-form text (copy-pasted from email confirmations)
 - Must detect plan type from content signals (e.g., flight numbers, "Check-in", "Reservation")
@@ -136,14 +108,14 @@ Plan
 - Returns a pre-filled plan for user review before saving
 - Operates on-device or via backend API — must not store raw pasted text beyond the session
 
-### 6.2 Weather Integration
+### 5.2 Weather Integration
 
 - Source: a weather API (e.g., OpenWeatherMeter or similar) with forecast coverage
 - Display: weather icon (sunny, cloudy, rainy, snowy, etc.) per plan
 - Refresh: icons update when the itinerary view is loaded; cached for ≤ 1 hour
 - Fallback: no icon displayed if weather data unavailable
 
-### 6.3 Authentication
+### 5.3 Authentication
 
 - Email-based account creation and login (magic link or email + password)
 - Sessions persist on device
@@ -151,20 +123,18 @@ Plan
 
 ---
 
-## 7. Non-Functional Requirements
+## 6. Non-Functional Requirements
 
 | Category | Requirement |
 |----------|-------------|
 | Platform | iOS (first release); Android out of scope for MVP |
 | Performance | Trip and plan screens load in < 2 s on LTE |
-| Offline | Cached trips viewable offline; edits queued and synced on reconnect |
 | Security | All API traffic over HTTPS; shared trip links expire after 30 days by default |
 | Privacy | Pasted booking text not persisted server-side after parsing |
-| Accessibility | VoiceOver support for core navigation and plan views |
 
 ---
 
-## 8. Out of Scope
+## 7. Out of Scope
 
 See §3 Non-Goals. Additionally out of scope for MVP:
 
@@ -175,7 +145,7 @@ See §3 Non-Goals. Additionally out of scope for MVP:
 
 ---
 
-## 9. Open Questions
+## 8. Open Questions
 
 | # | Question | Owner |
 |---|----------|-------|
@@ -193,5 +163,3 @@ See §3 Non-Goals. Additionally out of scope for MVP:
 |--------|--------|
 | Trip creation to first plan added | < 3 minutes (median) |
 | Booking parser accuracy | ≥ 80% of fields correctly extracted without user correction |
-| Shared itinerary open rate | ≥ 60% of shared links opened within 48 hours |
-| D7 retention | ≥ 40% of users return within 7 days of first trip creation |

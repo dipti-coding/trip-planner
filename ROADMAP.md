@@ -4,14 +4,12 @@
 
 | Layer | Technology |
 |---|---|
-| Mobile | React Native + Expo |
+| Mobile | React Native |
 | Backend | FastAPI (Python) |
-| Database | PostgreSQL (Supabase hosted) |
-| Auth | Supabase Auth |
+| Database | PostgreSQL (Aurora) |
+| Auth | AWS Auth |
 | Booking Text Parsing | External library or in-house parsing logic |
-| Outbound Email | Resend |
-| File Storage | Supabase Storage |
-| Deployment | Railway (FastAPI) + Expo EAS (mobile) |
+| Deployment | Justfiles | Hermit | Terraform | Docker Compose | NPM |
 | Type Sync | openapi-typescript (FastAPI schema → RN types) |
 
 ---
@@ -22,8 +20,32 @@
 2. Create a trip (name, destination, dates) and receive a Trip ID
 3. Paste hotel/flight confirmation text → Text parsed → plan added to trip
 4. Supported plan types: Activity, Restaurant, Meeting, Flight, Hotel, Tour, Car Reservation, Cruise, Ferry Ride, Map Destination, Railway Ride, Bus Ride, Local Event
-5. Share read-only trip itinerary with others via email
+5. Support download of PDF version of trip 
 6. Live weather icons displayed next to each plan
+
+---
+
+## 5. Data Models
+
+```
+User
+  id, email, home_city, created_at
+  preferences: [activity_type]
+
+Trip
+  id (public trip ID), owner_user_id
+  name, destination_city, start_date, end_date
+  created_at, updated_at
+
+Plan
+  id, trip_id
+  type (enum: Activity | Restaurant | Meeting | Flight | Hotel | Tour |
+              CarReservation | Cruise | Ferry | MapDestination |
+              RailwayRide | BusRide | LocalEvent)
+  name, date, start_time, end_time, location, notes
+  type_specific_fields (JSON)
+  created_at, updated_at
+```
 
 ---
 
@@ -37,22 +59,21 @@
   - `users` (id, email, home_city, activity_preferences[], created_at)
   - `trips` (id, trip_id, user_id, name, destination_city, start_date, end_date, created_at)
   - `plans` (id, trip_id, type, title, start_datetime, end_datetime, details JSONB, created_at)
-- [ ] Supabase project setup (Postgres + Auth)
-- [ ] Auth routes: POST `/auth/register`, POST `/auth/login` (JWT via Supabase Auth)
+- [ ] Project setup (Postgres + AWS Auth)
+- [ ] Auth routes: POST `/auth/register`, POST `/auth/login`
 - [ ] User profile routes: GET/PUT `/users/me` (home city, preferences)
 - [ ] Trip routes: POST `/trips`, GET `/trips`, GET `/trips/{trip_id}`
 - [ ] Plan routes: GET `/trips/{trip_id}/plans`, DELETE `/plans/{plan_id}`
 - [ ] OpenAPI schema auto-generated and accessible at `/docs`
 
 ### Mobile
-- [ ] Initialize Expo project (`npx create-expo-app`)
-- [ ] Install and configure navigation (`expo-router`)
+- [ ] Initialize Xcode project 
 - [ ] Scaffold screen structure: Auth, Home (trip list), Trip Detail, Add Plan
-- [ ] Set up API client (`axios` instance with base URL + auth header)
+- [ ] Set up API client (TBD: `axios` instance with base URL + auth header)
 - [ ] Generate TypeScript types from FastAPI OpenAPI schema
 
 ### Deliverable
-A locally running FastAPI with auth, user profile, trip creation, and empty plan list. Expo app navigates between screens (static/mocked data is fine).
+A locally running FastAPI testing backend/front-end connection in app preview, trip creation, and empty plan list. Xcode Simulator displaying "hello world" from backend.
 
 ---
 
@@ -79,32 +100,28 @@ A locally running FastAPI with auth, user profile, trip creation, and empty plan
 - [ ] Delete plan with swipe gesture
 
 ### Deliverable
-End-to-end flow: create a trip → paste a flight or hotel confirmation → confirm parsed result → view it on the trip timeline.
+Auth, user profile, End-to-end flow: create a trip → paste a flight or hotel confirmation → confirm parsed result → view it on the trip timeline.
 
 ---
 
-## Week 3 — Weather + Email Sharing
+## Week 3 — Weather + PDF Export
 
-**Goal:** Live weather on the trip view and shareable read-only itineraries via email.
+**Goal:** Live weather on the trip view and PDF export of itineraries.
 
 ### Backend
 - [ ] Integrate OpenWeatherMap API (free tier sufficient for MVP)
   - `GET /trips/{trip_id}/weather` — fetches current conditions for the trip destination
   - Returns icon code, temperature, condition per day of trip
-- [ ] Build read-only trip share token: `POST /trips/{trip_id}/share` → returns a signed `share_token`
-- [ ] Public endpoint `GET /share/{share_token}` — returns full trip + plans, no auth required
-- [ ] Integrate Resend for outbound email
-  - `POST /trips/{trip_id}/share/email` — accepts recipient email, sends formatted itinerary with share link
-  - Email template: trip name, destination, dates, plan list ordered chronologically
+- [ ] PDf Generator logic
+  - `POST /trips/{trip_id}/download` — generates PDF version of trip
 
 ### Mobile
 - [ ] Weather strip on Trip Detail screen: weather icon + temperature per trip day
 - [ ] Plan cards show weather icon for the day of that plan
-- [ ] Share button on Trip Detail → email input modal → success confirmation
-- [ ] Read-only trip view (rendered from share token, no auth required — accessible via deep link or web browser)
+- [ ] Export button on Trip Detail → PDF generated allowing user to save it to the device
 
 ### Deliverable
-A complete trip view with weather, and the ability to email a read-only link to someone who can view the full itinerary without an account.
+A complete trip view with weather, and the ability to generate a PDF version of the trip.
 
 ---
 
@@ -113,8 +130,8 @@ A complete trip view with weather, and the ability to email a read-only link to 
 **Goal:** MVP is stable, deployed, and ready for TestFlight.
 
 ### Backend
-- [ ] Deploy FastAPI to Railway (environment variables, Postgres connection, health check)
-- [ ] Add request logging and basic error monitoring (Sentry or Railway built-in logs)
+- [ ] Deploy FastAPI (environment variables, Postgres connection, health check)
+- [ ] Add request logging and basic error monitoring (TBD: Sentry)
 - [ ] End-to-end API testing for all core flows
 
 ### Mobile
@@ -131,19 +148,19 @@ A complete trip view with weather, and the ability to email a read-only link to 
 - [ ] Handle text parse failures gracefully (show raw text, let user manually fill fields)
 
 ### Deliverable
-MVP live on TestFlight. Full flow: sign up → create trip → paste confirmation → view plans with weather → share itinerary via email.
+MVP live on TestFlight. Full flow: sign up → create trip → paste confirmation → view plans with weather → download trip PDF to view on device.
 
 ---
 
-## Post-MVP Backlog
+## Post-MVP Backlog (In Priority Order)
 
 | # | Feature | Notes |
 |---|---|---|
-| 1 | **Collaborative editing** | Multiple users can view and edit the same trip; requires real-time sync (Supabase Realtime or WebSockets) |
-| 2 | **Nearby Places** | Google Maps Places API → find restaurants, coffee, activities near plan location → add as Map Destination plan |
-| 3 | **PDF itineraries** | Generate and download/print a formatted trip PDF (WeasyPrint on FastAPI or a client-side PDF library) |
-| 4 | **Plan recommendations based on empty time slots** | Detect empty time slots in trip → Suggests Breakfast, Lunch, Dinner, or activities based on destination and preferences |
-| 5 | **Transit directions** | Public transportation options from current location to plan location (Google Maps Directions API) |
+| 1 | **Nearby Places** | Google Maps Places API → find restaurants, coffee, activities near plan location → add as Map Destination plan |
+| 2 | **Transit directions** | Public transportation options from current location to plan location (Google Maps Directions API) |
+| 3 | **Plan recommendations based on empty time slots** | Detect empty time slots in trip → Suggests Breakfast, Lunch, Dinner, or activities based on destination and preferences |
+| 4 | **Collaborative editing** | Multiple users can view and edit the same trip; requires real-time sync |
+| 5 | **Share itineraries** | Provide a itinerary sharing functionality to users through email |
 | 6 | **Inbound email parsing** | Users forward booking emails to `trips@yourdomain.com` → Mailgun Inbound webhook → Parsing library parses → plan created automatically |
 
 
