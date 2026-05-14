@@ -53,8 +53,16 @@ Plan
 
 **Goal:** Core API running locally with auth and database wired up.
 
+### Deployment Infra
+- [ ] Install Hermit and pin toolchain versions (Python, Terraform, Node)
+- [ ] Docker Compose setup: local Postgres container with named volume, health check, and `.env` wiring
+- [ ] Justfile with core dev commands: `just up` (start services), `just migrate` (run DB migrations), `just dev` (start FastAPI with hot reload), `just test`
+- [ ] Terraform scaffolding for AWS Aurora — directory structure and variable stubs (not applied until Week 4)
+- [ ] `package.json` / NPM workspace root configured for React Native tooling
+
 ### Backend
 - [ ] Initialize FastAPI project structure (`/app`, `/models`, `/routes`, `/services`)
+- [ ] `GET /ping` — returns `{"message": "Hello from Trip Planner"}` with 200; used to verify local stack is running end-to-end
 - [ ] PostgreSQL schema design
   - `users` (id, email, home_city, activity_preferences[], created_at)
   - `trips` (id, trip_id, user_id, name, destination_city, start_date, end_date, created_at)
@@ -70,10 +78,11 @@ Plan
 - [ ] Initialize Xcode project 
 - [ ] Scaffold screen structure: Auth, Home (trip list), Trip Detail, Add Plan
 - [ ] Set up API client (TBD: `axios` instance with base URL + auth header)
+- [ ] Call `GET /ping` from the app and display the response on a placeholder screen
 - [ ] Generate TypeScript types from FastAPI OpenAPI schema
 
 ### Deliverable
-A locally running FastAPI testing backend/front-end connection in app preview, trip creation, and empty plan list. Xcode Simulator displaying "hello world" from backend.
+A locally running FastAPI (via `just dev`) with Postgres in Docker, verified end-to-end by `GET /ping` returning "Hello from Trip Planner" in the Xcode Simulator.
 
 ---
 
