@@ -1,0 +1,10 @@
+{
+  "name": "trip-planner",
+  "private": true,
+  "workspaces": [
+    "mobile"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

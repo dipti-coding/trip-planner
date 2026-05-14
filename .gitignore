@@ -1,0 +1,28 @@
+# Claude
+.claude/settings/local.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+.pytest_cache/
+
+# Environment
+.env
+
+# Terraform
+infra/.terraform/
+infra/.terraform.lock.hcl
+infra/*.tfstate
+infra/*.tfstate.backup
+infra/*.tfvars
+
+# Node / React Native
+node_modules/
+mobile/node_modules/
+
+# macOS
+.DS_Store
