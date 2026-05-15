@@ -22,19 +22,25 @@
 - [x] Seed script (`scripts/seed.py`) — 1 user, 1 trip, 8 plans across Flight, Hotel, Activity, Restaurant, RailwayRide, Tour, LocalEvent, CarReservation; `just seed` command added
 - [x] `GET /trips` and `GET /trips/{trip_id}` — read-only endpoints with UUID type safety
 - [x] `GET /trips/{trip_id}/plans` — read-only endpoint returning plans ordered by start_datetime, verified locally
-- [ ] OpenAPI schema at `/docs`
 
 ### Mobile
-- [ ] Initialize Xcode project
-- [ ] Set up API client (`axios` pointing to `http://localhost:8000`)
-- [ ] Call `GET /ping` and display response on placeholder screen
-- [ ] Call `GET /trips` and render trip list in Simulator
-- [ ] Call `GET /trips/{trip_id}/plans` and render plan list for a trip
+- [x] Initialized React Native CLI project (v0.85.3) in `mobile/` — iOS app name: TripPlanner
+- [x] CocoaPods installed via Bundler (`bundle install && bundle exec pod install`) — 75 pods
+- [x] `metro.config.js` updated to resolve hoisted npm workspace modules from root `node_modules`
+- [x] `App.tsx` — fetches `GET /trips` and `GET /trips/{trip_id}/plans`, renders trip header + plan list in Simulator
+- [x] Seeded trip (Tokyo Summer 2026) and 8 plans displaying live from local Postgres in Xcode Simulator
+- [ ] Scaffold screen structure: Auth, Home (trip list), Trip Detail, Add Plan
+- [ ] Set up dedicated API client (axios with base URL)
+- [ ] Generate TypeScript types from FastAPI OpenAPI schema
 
 ---
 
 ## Week 2 — Auth + Core Endpoints + Booking Text Parsing
 _Not started_
+
+### Carry-over from Week 1
+- [ ] OpenAPI schema verified at `/docs`
+- [ ] Hermit — toolchain pinning (Python, Terraform, Node)
 
 ## Week 3 — Weather + PDF Export
 _Not started_
