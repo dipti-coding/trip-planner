@@ -159,6 +159,50 @@ alembic downgrade -1
 
 ---
 
+## Testing with Seed Data
+
+Populate the database with a test user, trip, and 8 plans across different plan types:
+
+```bash
+just seed
+```
+
+Expected output:
+
+```
+✓ User:  traveler@example.com (id: ...)
+✓ Trip:  Tokyo Summer 2026 (id: ...)
+✓ Plans: 8 seeded
+    - [Flight] SFO → NRT — United UA 837
+    - [Hotel] Shinjuku Granbell Hotel
+    - [Activity] Shibuya Crossing & Harajuku
+    - [Restaurant] Dinner at Sukiyabashi Jiro
+    - [RailwayRide] Shinkansen Tokyo → Kyoto
+    - [Tour] Tsukiji Market Food Tour
+    - [LocalEvent] Sumo Tournament — Ryogoku Kokugikan
+    - [CarReservation] Rental Car — Kyoto Day Trip
+```
+
+The seed script wipes and repopulates all data on each run — safe to re-run at any time.
+
+**Verify seeded data in Postgres:**
+
+```bash
+docker exec -it trip-planner-postgres-1 psql -U trip_planner -d trip_planner_dev -c "SELECT type, title FROM plans;"
+```
+
+**Verify via the API** (with `just dev` running):
+
+```bash
+# List all trips
+curl -s http://localhost:8000/trips | python3 -m json.tool
+
+# List plans for a trip (replace <trip_id> with id from seed output)
+curl -s http://localhost:8000/trips/<trip_id>/plans | python3 -m json.tool
+```
+
+---
+
 ## Run Tests
 
 ```bash
@@ -188,6 +232,7 @@ docker compose down -v
 | `just up` | Start Docker services |
 | `just dev` | Start FastAPI with hot reload |
 | `just migrate` | Run pending DB migrations |
+| `just seed` | Wipe and repopulate DB with test data |
 | `just test` | Run test suite |
 | `just ping` | Verify the API is responding |
 | `just logs` | Tail Docker container logs |

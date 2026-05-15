@@ -27,6 +27,10 @@ test:
 logs:
     docker compose logs -f
 
+# Seed the database with test users, trips, and plans
+seed:
+    python scripts/seed.py
+
 # Verify the ping endpoint is responding
 ping:
     curl -s http://localhost:8000/ping | python3 -m json.tool
