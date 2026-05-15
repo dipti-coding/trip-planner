@@ -15,9 +15,11 @@
 ### Backend
 - [x] FastAPI project structure — `app/`, `app/routes/`, `app/models/`, `app/services/`
 - [x] `GET /ping` — returns `{"message": "Hello from Trip Planner"}`, verified locally
-- [ ] PostgreSQL schema design + SQLAlchemy models (users, trips, plans)
-- [ ] Alembic migration to apply schema to local Postgres
-- [ ] Seed script — insert sample trip and plans for simulator testing
+- [x] PostgreSQL schema design + SQLAlchemy models (users, trips, plans) with UUID PKs, ARRAY, JSONB, and plantype enum
+- [x] Pydantic schemas for all 13 plan types (`app/schemas/plan_details.py`) + `PlanResponse` and `PLAN_DETAILS_SCHEMA` map
+- [x] Alembic migration (`ca9748030000_initial_schema`) — applied and verified locally, all 3 tables confirmed in Postgres
+- [x] `app/db.py` — SQLAlchemy engine and `SessionLocal`
+- [x] Seed script (`scripts/seed.py`) — 1 user, 1 trip, 8 plans across Flight, Hotel, Activity, Restaurant, RailwayRide, Tour, LocalEvent, CarReservation; `just seed` command added
 - [ ] `GET /trips` and `GET /trips/{trip_id}/plans` — read-only endpoints returning seeded data (no auth yet)
 - [ ] OpenAPI schema at `/docs`
 
