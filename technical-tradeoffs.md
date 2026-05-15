@@ -93,6 +93,36 @@ Booking confirmations have no standard format. A United Airlines confirmation lo
 **Break-even vs TripIt API:** TripIt becomes cheaper beyond ~40,000 parse calls/month (~4,000 active users parsing 10x/month). Claude API is the right choice through early growth.
 
 
+## Plan `details` Field: JSON vs JSONB
+
+**Decision: JSONB**
+
+The `plans` table stores type-specific fields (flight seat, hotel confirmation, restaurant party size, etc.) in a single `details` column rather than 13 separate tables or dozens of nullable columns.
+
+### Options Evaluated
+
+| | JSON | JSONB |
+|---|---|---|
+| Storage | Stored as plain text | Stored as decomposed binary |
+| Read speed | Slower — must re-parse on every read | Faster — pre-parsed, binary comparison |
+| Write speed | Slightly faster | Slightly slower (decomposition on insert) |
+| Indexing | Not indexable | Supports GIN indexes for key/value queries |
+| Key ordering | Preserves insertion order | Does not preserve key order |
+| Duplicate keys | Preserves all duplicates | Keeps last value only |
+| **Best for** | Audit logs, write-heavy append-only data | **Application data queried by content** |
+
+### Rationale
+
+JSONB is the right choice here for three reasons:
+
+1. **Query performance** — future features (e.g. find all flights with `departure_airport = "SFO"`) require filtering inside the JSON blob. JSONB supports GIN indexes for this; plain JSON does not.
+2. **Read-heavy access pattern** — plans are read every time a trip is opened. Binary storage means no re-parsing overhead on each read.
+3. **No ordering requirement** — plan details have no meaningful key order, so the one downside of JSONB (no key order preservation) does not apply.
+
+**Alternative considered:** Separate table per plan type (e.g. `flight_plans`, `hotel_plans`). Rejected because it requires 13 tables, complex polymorphic joins, and schema migrations every time a new plan type is added. JSONB keeps the schema stable while the Pydantic layer (`app/schemas/plan_details.py`) enforces the shape per type.
+
+---
+
 ## Booking Confirmation Text Parsing
 
 The core problem

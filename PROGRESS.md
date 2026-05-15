@@ -20,7 +20,8 @@
 - [x] Alembic migration (`ca9748030000_initial_schema`) — applied and verified locally, all 3 tables confirmed in Postgres
 - [x] `app/db.py` — SQLAlchemy engine and `SessionLocal`
 - [x] Seed script (`scripts/seed.py`) — 1 user, 1 trip, 8 plans across Flight, Hotel, Activity, Restaurant, RailwayRide, Tour, LocalEvent, CarReservation; `just seed` command added
-- [ ] `GET /trips` and `GET /trips/{trip_id}/plans` — read-only endpoints returning seeded data (no auth yet)
+- [x] `GET /trips` and `GET /trips/{trip_id}` — read-only endpoints with UUID type safety
+- [ ] `GET /trips/{trip_id}/plans` — read-only endpoint returning plans for a trip
 - [ ] OpenAPI schema at `/docs`
 
 ### Mobile
