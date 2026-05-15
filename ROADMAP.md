@@ -49,9 +49,9 @@ Plan
 
 ---
 
-## Week 1 — Backend Foundation
+## Week 1 — Backend Foundation + DB Schema + Simulator Connection
 
-**Goal:** Core API running locally with auth and database wired up.
+**Goal:** Local stack running, schema defined, and DB data visible in the Xcode Simulator.
 
 ### Deployment Infra
 - [ ] Install Hermit and pin toolchain versions (Python, Terraform, Node)
@@ -63,45 +63,50 @@ Plan
 ### Backend
 - [ ] Initialize FastAPI project structure (`/app`, `/models`, `/routes`, `/services`)
 - [ ] `GET /ping` — returns `{"message": "Hello from Trip Planner"}` with 200; used to verify local stack is running end-to-end
-- [ ] PostgreSQL schema design
+- [ ] PostgreSQL schema design + SQLAlchemy models
   - `users` (id, email, home_city, activity_preferences[], created_at)
   - `trips` (id, trip_id, user_id, name, destination_city, start_date, end_date, created_at)
   - `plans` (id, trip_id, type, title, start_datetime, end_datetime, details JSONB, created_at)
-- [ ] Project setup (Postgres + AWS Auth)
-- [ ] Auth routes: POST `/auth/register`, POST `/auth/login`
-- [ ] User profile routes: GET/PUT `/users/me` (home city, preferences)
-- [ ] Trip routes: POST `/trips`, GET `/trips`, GET `/trips/{trip_id}`
-- [ ] Plan routes: GET `/trips/{trip_id}/plans`, DELETE `/plans/{plan_id}`
+- [ ] Alembic migration to apply schema to local Postgres
+- [ ] Seed script — insert sample trip and plans for simulator testing
+- [ ] `GET /trips` and `GET /trips/{trip_id}/plans` — read-only endpoints returning seeded data (no auth yet)
 - [ ] OpenAPI schema auto-generated and accessible at `/docs`
 
 ### Mobile
-- [ ] Initialize Xcode project 
-- [ ] Scaffold screen structure: Auth, Home (trip list), Trip Detail, Add Plan
-- [ ] Set up API client (TBD: `axios` instance with base URL + auth header)
-- [ ] Call `GET /ping` from the app and display the response on a placeholder screen
-- [ ] Generate TypeScript types from FastAPI OpenAPI schema
+- [ ] Initialize Xcode project
+- [ ] Set up API client (`axios` instance pointing to `http://localhost:8000`)
+- [ ] Call `GET /ping` and display response on a placeholder screen
+- [ ] Call `GET /trips` and render a list of trip names in the Simulator
+- [ ] Call `GET /trips/{trip_id}/plans` and render a list of plans for a trip
 
 ### Deliverable
-A locally running FastAPI (via `just dev`) with Postgres in Docker, verified end-to-end by `GET /ping` returning "Hello from Trip Planner" in the Xcode Simulator.
+Xcode Simulator displaying a seeded trip list and plan list fetched live from local Postgres via FastAPI — no auth required yet.
 
 ---
 
-## Week 2 — Booking Text Parsing + Plan Management
+## Week 2 — Auth + Core Endpoints + Booking Text Parsing
 
-**Goal:** Users can paste booking text and have it parsed into structured plans on a trip.
+**Goal:** Auth wired up, full CRUD endpoints in place, and booking text parsed into structured plans.
 
 ### Backend
+- [ ] Project setup (Postgres + AWS Auth)
+- [ ] Auth routes: POST `/auth/register`, POST `/auth/login`
+- [ ] User profile routes: GET/PUT `/users/me` (home city, preferences)
+- [ ] Trip routes: POST `/trips`, GET `/trips`, GET `/trips/{trip_id}` (auth-gated)
+- [ ] Plan routes: GET `/trips/{trip_id}/plans`, DELETE `/plans/{plan_id}`
 - [ ] Integrate text parsing library
 - [ ] Build `POST /trips/{trip_id}/plans/parse` endpoint
   - Accepts raw pasted text
   - Sends to parsing library to extract plan type, title, dates/times, confirmation numbers, location, relevant details
   - Returns structured plan JSON and persists to DB
-- [ ] The library returns a consistent schema to be add to a specific plan type.
 - [ ] Build `POST /trips/{trip_id}/plans` for manual plan creation (non-parsed)
 - [ ] Plan `details` field uses JSONB to store type-specific fields (e.g. flight: airline, flight number, seat; hotel: check-in, check-out, room type)
-- [ ] Input validation and graceful error handling if booking text cannot be parsed correctly.
+- [ ] Input validation and graceful error handling if booking text cannot be parsed correctly
 
 ### Mobile
+- [ ] Auth flow: sign up, log in, persist session token
+- [ ] Scaffold screen structure: Auth, Home (trip list), Trip Detail, Add Plan
+- [ ] Generate TypeScript types from FastAPI OpenAPI schema
 - [ ] Trip Detail screen: display trip metadata + list of plans sorted by date/time
 - [ ] Plan card components for each plan type with relevant icon
 - [ ] Paste-box screen: text input → calls `/parse` endpoint → shows parsed result for confirmation before saving

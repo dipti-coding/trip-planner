@@ -1,6 +1,6 @@
 # Development Progress
 
-## Week 1 — Backend Foundation
+## Week 1 — Backend Foundation + DB Schema + Simulator Connection
 
 ### Deployment Infra
 - [x] Docker Compose — local Postgres 16 with named volume and health check
@@ -15,24 +15,22 @@
 ### Backend
 - [x] FastAPI project structure — `app/`, `app/routes/`, `app/models/`, `app/services/`
 - [x] `GET /ping` — returns `{"message": "Hello from Trip Planner"}`, verified locally
-- [ ] PostgreSQL schema design (users, trips, plans)
-- [ ] Project setup (Postgres + AWS Auth)
-- [ ] Auth routes: `POST /auth/register`, `POST /auth/login`
-- [ ] User profile routes: `GET /PUT /users/me`
-- [ ] Trip routes: `POST /trips`, `GET /trips`, `GET /trips/{trip_id}`
-- [ ] Plan routes: `GET /trips/{trip_id}/plans`, `DELETE /plans/{plan_id}`
+- [ ] PostgreSQL schema design + SQLAlchemy models (users, trips, plans)
+- [ ] Alembic migration to apply schema to local Postgres
+- [ ] Seed script — insert sample trip and plans for simulator testing
+- [ ] `GET /trips` and `GET /trips/{trip_id}/plans` — read-only endpoints returning seeded data (no auth yet)
 - [ ] OpenAPI schema at `/docs`
 
 ### Mobile
 - [ ] Initialize Xcode project
-- [ ] Scaffold screen structure: Auth, Home, Trip Detail, Add Plan
-- [ ] Set up API client (`axios` with base URL + auth header)
+- [ ] Set up API client (`axios` pointing to `http://localhost:8000`)
 - [ ] Call `GET /ping` and display response on placeholder screen
-- [ ] Generate TypeScript types from FastAPI OpenAPI schema
+- [ ] Call `GET /trips` and render trip list in Simulator
+- [ ] Call `GET /trips/{trip_id}/plans` and render plan list for a trip
 
 ---
 
-## Week 2 — Booking Text Parsing + Plan Management
+## Week 2 — Auth + Core Endpoints + Booking Text Parsing
 _Not started_
 
 ## Week 3 — Weather + PDF Export
