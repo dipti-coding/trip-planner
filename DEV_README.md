@@ -194,11 +194,17 @@ docker exec -it trip-planner-postgres-1 psql -U trip_planner -d trip_planner_dev
 **Verify via the API** (with `just dev` running):
 
 ```bash
-# List all trips
+# List all trips — copy the id from the response
 curl -s http://localhost:8000/trips | python3 -m json.tool
 
-# List plans for a trip (replace <trip_id> with id from seed output)
+# Get a specific trip
+curl -s http://localhost:8000/trips/<trip_id> | python3 -m json.tool
+
+# List plans for a trip ordered by start_datetime
 curl -s http://localhost:8000/trips/<trip_id>/plans | python3 -m json.tool
+
+# Test 404 handling
+curl -s http://localhost:8000/trips/00000000-0000-0000-0000-000000000000/plans
 ```
 
 ---
