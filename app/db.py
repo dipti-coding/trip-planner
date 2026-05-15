@@ -8,3 +8,11 @@ load_dotenv()
 
 engine = create_engine(os.environ["DATABASE_URL"])
 SessionLocal = sessionmaker(bind=engine)
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

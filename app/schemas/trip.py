@@ -1,0 +1,17 @@
+from datetime import date, datetime
+from uuid import UUID
+
+from pydantic import BaseModel
+
+
+class TripResponse(BaseModel):
+    id: UUID
+    user_id: UUID
+    name: str
+    destination_city: str
+    start_date: date
+    end_date: date
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
