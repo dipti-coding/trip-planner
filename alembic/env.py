@@ -13,8 +13,8 @@ config.set_main_option("sqlalchemy.url", os.environ["DATABASE_URL"])
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Replace with Base.metadata once models are defined
-target_metadata = None
+from app.models import Base  # noqa: E402 — must come after config setup
+target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:

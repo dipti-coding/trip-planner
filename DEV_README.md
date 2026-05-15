@@ -115,6 +115,50 @@ curl http://localhost:8000/ping
 
 ---
 
+## Verify the Database Schema
+
+After running `just migrate`, confirm all tables were created:
+
+```bash
+docker exec -it trip-planner-postgres-1 psql -U trip_planner -d trip_planner_dev -c "\dt"
+```
+
+Expected output:
+
+```
+              List of relations
+ Schema |      Name       | Type  |    Owner
+--------+-----------------+-------+-------------
+ public | alembic_version | table | trip_planner
+ public | plans           | table | trip_planner
+ public | trips           | table | trip_planner
+ public | users           | table | trip_planner
+```
+
+To inspect a table's columns:
+
+```bash
+docker exec -it trip-planner-postgres-1 psql -U trip_planner -d trip_planner_dev -c "\d users"
+```
+
+### Adding a new migration
+
+After modifying a SQLAlchemy model in `app/models/`, generate and apply a migration:
+
+```bash
+source .venv/bin/activate
+alembic revision --autogenerate -m "describe your change"
+just migrate
+```
+
+To roll back the last migration:
+
+```bash
+alembic downgrade -1
+```
+
+---
+
 ## Run Tests
 
 ```bash
