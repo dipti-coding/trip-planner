@@ -35,3 +35,14 @@ seed:
 # Verify the ping endpoint is responding
 ping:
     curl -s http://localhost:${API_PORT:-8000}/ping | python3 -m json.tool
+
+# Run iOS app in the booted simulator
+ios:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    UDID=$(xcrun simctl list devices booted | grep -oE '[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}' | head -1)
+    if [ -z "$UDID" ]; then
+        echo "No booted simulator found. Open Simulator.app and boot a device first."
+        exit 1
+    fi
+    cd mobile && npm run ios -- --udid "$UDID"
