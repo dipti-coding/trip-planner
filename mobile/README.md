@@ -34,13 +34,13 @@ yarn android
 
 ### iOS
 
-```sh
-# Using npm
-npm run ios
+Use `just ios` from the repo root — it auto-detects the booted simulator and passes the correct UDID to xcodebuild:
 
-# OR using Yarn
-yarn ios
+```sh
+just ios
 ```
+
+> `npm run ios` may fail with "Unable to find a destination" if your Xcode SDK version doesn't match the simulator runtime. `just ios` works around this by passing `--udid` directly. Make sure a simulator is booted in Simulator.app first.
 
 If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
 
