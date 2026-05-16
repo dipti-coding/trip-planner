@@ -126,22 +126,6 @@ hermit shell-hooks --zsh   # or --bash / --fish
 
 ---
 
-## `docker compose` command not found
-
-**Error:** `unknown shorthand flag: 'd' in -d` or `docker: unknown command: docker compose`
-
-**Cause:** Docker Desktop is installed but the Compose CLI plugin isn't linked into `~/.docker/cli-plugins/`.
-
-**Fix:**
-```bash
-mkdir -p ~/.docker/cli-plugins
-ln -sf /Applications/Docker.app/Contents/Resources/cli-plugins/docker-compose ~/.docker/cli-plugins/docker-compose
-```
-
-Verify: `docker compose version`
-
----
-
 ## Port 5432 or 8000 already in use (shared machine)
 
 **Error:**
