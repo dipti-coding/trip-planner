@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import client from '../api/client';
+import {BUILDINGS, COVER_SKY, BUILDING_COLOR} from '../assets/skyline';
 import type {Trip} from '../types';
 import {dayCount, fmtShort, tripStatus} from '../utils/dates';
 import type {RootStackParamList} from '../App';
@@ -21,14 +22,6 @@ type Props = {
 
 type TripStatus = 'current' | 'future' | 'past';
 type TripWithStatus = Trip & {status: TripStatus};
-
-const BUILDINGS = [
-  {l: 0, w: 40, h: 48}, {l: 40, w: 22, h: 62}, {l: 62, w: 32, h: 54},
-  {l: 118, w: 26, h: 66}, {l: 144, w: 20, h: 56},
-  {l: 196, w: 34, h: 58}, {l: 232, w: 18, h: 48},
-  {l: 250, w: 38, h: 70}, {l: 288, w: 24, h: 54},
-  {l: 312, w: 30, h: 62}, {l: 342, w: 18, h: 48},
-];
 
 function CitySkyline() {
   return (
@@ -203,8 +196,6 @@ export default function HomeScreen({navigation}: Props) {
   );
 }
 
-const BUILDING_COLOR = 'rgba(20,18,30,0.55)';
-
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: '#f4f4f4'},
   centered: {flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24},
@@ -251,7 +242,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: 12,
   },
-  cover: {height: 140, backgroundColor: '#2a1f3d', overflow: 'hidden'},
+  cover: {height: 140, backgroundColor: COVER_SKY, overflow: 'hidden'},
   coverScrim: {backgroundColor: 'rgba(0,0,0,0.25)'},
   coverTop: {
     position: 'absolute', top: 12, left: 14, right: 14,
