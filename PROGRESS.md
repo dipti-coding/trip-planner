@@ -29,9 +29,33 @@
 - [x] `metro.config.js` updated to resolve hoisted npm workspace modules from root `node_modules`
 - [x] `App.tsx` — fetches `GET /trips` and `GET /trips/{trip_id}/plans`, renders trip header + plan list in Simulator
 - [x] Seeded trip (Tokyo Summer 2026) and 8 plans displaying live from local Postgres in Xcode Simulator
-- [ ] Scaffold screen structure: Auth, Home (trip list), Trip Detail, Add Plan
-- [ ] Set up dedicated API client (axios with base URL)
+- [x] Scaffold screen structure: Home (trip list) + Trip Detail — see PlanMyTrip section below
+- [x] Set up dedicated API client (`mobile/api/client.ts` — axios)
 - [ ] Generate TypeScript types from FastAPI OpenAPI schema
+
+---
+
+## PlanMyTrip — Read-Only Views
+
+Design source: `plan-my-trip-handoff.zip` (IBM Carbon + iOS Weather aesthetic)
+Branch: `feature/plan-my-trip-views`
+
+### Mobile
+- [x] Feature branch: `feature/plan-my-trip-views`
+- [x] React Navigation native-stack installed + wired (Home → TripDetail)
+- [x] `mobile/api/client.ts` — axios instance → `http://localhost:8000`
+- [x] `mobile/types.ts` — shared Trip + Plan types
+- [x] `mobile/screens/HomeScreen.tsx` — trip list with sections (current/upcoming/past), search bar, city-silhouette image cards
+- [x] `mobile/screens/TripDetailScreen.tsx` — blue weather header, collapsing title block, scrollable day-strip pills, day plan list
+- [x] `mobile/components/PlanCard.tsx` — gradient icon thumb, time/duration, title, type-specific subtitle
+- [ ] Verified against seed data in iOS Simulator
+
+### Testing with seed data
+```
+just seed   # populate Tokyo Summer 2026 + 8 plans
+just dev    # FastAPI on :8000
+npm run ios # from mobile/
+```
 
 ---
 
