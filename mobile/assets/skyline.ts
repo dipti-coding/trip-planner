@@ -14,5 +14,5 @@ export const BUILDINGS: Building[] = [
   {l: 342, w: 18, h: 48},
 ];
 
-export const COVER_SKY = '#2e5ca8';
+export const COVER_SKY = '#3d7fd4';
 export const BUILDING_COLOR = 'rgba(10,12,30,0.5)';
