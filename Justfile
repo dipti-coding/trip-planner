@@ -1,4 +1,5 @@
 set dotenv-load
+export PATH := ".venv/bin:" + env_var('PATH')
 
 # Start local Postgres in Docker and wait until healthy
 up:
@@ -13,7 +14,7 @@ down:
 
 # Start FastAPI with hot reload
 dev:
-    uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+    uvicorn app.main:app --reload --host 0.0.0.0 --port ${API_PORT:-8000}
 
 # Run DB migrations
 migrate:
@@ -33,4 +34,15 @@ seed:
 
 # Verify the ping endpoint is responding
 ping:
-    curl -s http://localhost:8000/ping | python3 -m json.tool
+    curl -s http://localhost:${API_PORT:-8000}/ping | python3 -m json.tool
+
+# Run iOS app in the booted simulator
+ios:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    UDID=$(xcrun simctl list devices booted | grep -oE '[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}' | head -1)
+    if [ -z "$UDID" ]; then
+        echo "No booted simulator found. Open Simulator.app and boot a device first."
+        exit 1
+    fi
+    cd mobile && npm run ios -- --udid "$UDID"

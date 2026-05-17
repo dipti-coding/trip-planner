@@ -23,13 +23,13 @@ Install the following tools before starting:
 curl -fsSL https://github.com/cashapp/hermit/releases/download/stable/install.sh | /bin/bash
 ```
 
-Then activate the project toolchain from the repo root:
+Install shell hooks so Hermit auto-activates when you `cd` into the repo:
 
 ```bash
-source bin/activate-hermit
+hermit shell-hooks --zsh   # or --bash / --fish
 ```
 
-This pins Python, Node, and Terraform versions for this project shell session. Re-run each time you open a new terminal, or add it to your shell's `direnv` / `cd` hook.
+Open a new terminal — Hermit will activate automatically when you enter the project directory. You should see the hermit prompt indicator. No manual sourcing needed.
 
 ---
 
@@ -40,8 +40,9 @@ This pins Python, Node, and Terraform versions for this project shell session. R
 ```bash
 git clone https://github.com/dipti-coding/trip-planner.git
 cd trip-planner
-source bin/activate-hermit
 ```
+
+Hermit will auto-activate if you've installed the shell hooks (see above). If not, run `source bin/activate-hermit`.
 
 **2. Copy environment variables**
 
@@ -49,15 +50,16 @@ source bin/activate-hermit
 cp .env.example .env
 ```
 
-The defaults in `.env.example` work out of the box for local development. Do not commit `.env`.
+The defaults in `.env.example` work for local development. If ports 5432 or 8000 are taken by another process (e.g. on a shared machine), set `POSTGRES_PORT` and `API_PORT` in `.env` to free ports. Do not commit `.env`.
 
 **3. Install Python dependencies**
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate
 pip install -r requirements.txt
 ```
+
+The venv is activated automatically for all `just` commands — no need to `source .venv/bin/activate` in your shell.
 
 **4. Install Node dependencies** (React Native workspace root)
 
@@ -89,7 +91,7 @@ just migrate
 just dev
 ```
 
-The API is now running at `http://localhost:8000`. Interactive docs are at `http://localhost:8000/docs`.
+The API is now running at `http://localhost:${API_PORT}` (default 8000). Interactive docs are at the same host on `/docs`.
 
 ---
 
@@ -146,7 +148,6 @@ docker exec -it trip-planner-postgres-1 psql -U trip_planner -d trip_planner_dev
 After modifying a SQLAlchemy model in `app/models/`, generate and apply a migration:
 
 ```bash
-source .venv/bin/activate
 alembic revision --autogenerate -m "describe your change"
 just migrate
 ```
@@ -278,4 +279,20 @@ Check that Docker Desktop is running: `docker ps`. If the container exited, insp
 Make sure `.env` exists and has been populated: `cp .env.example .env`.
 
 **Port 5432 already in use**
-Another Postgres process is running locally. Either stop it (`brew services stop postgresql`) or change `POSTGRES_PORT` in `.env` and update `docker-compose.yml`.
+Another process (or another user on a shared machine) is holding the port. Set `POSTGRES_PORT=5433` (or any free port) in `.env` — `docker-compose.yml` picks it up automatically.
+
+**Port 8000 already in use**
+Set `API_PORT=8001` (or any free port) in `.env` — `just dev` and `just ping` pick it up automatically.
+
+**`docker compose` command not found**
+The Docker Compose CLI plugin is missing. Link it from Docker Desktop:
+```bash
+mkdir -p ~/.docker/cli-plugins
+ln -sf /Applications/Docker.app/Contents/Resources/cli-plugins/docker-compose ~/.docker/cli-plugins/docker-compose
+```
+
+**`python` command not found after `source bin/activate-hermit`**
+Hermit's Python package wasn't installed. Run:
+```bash
+hermit install python3@3.12 node@20 terraform@1.7
+```
