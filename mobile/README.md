@@ -34,29 +34,13 @@ yarn android
 
 ### iOS
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+Use `just ios` from the repo root — it auto-detects the booted simulator and passes the correct UDID to xcodebuild:
 
 ```sh
-bundle install
+just ios
 ```
 
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
-```
+> `npm run ios` may fail with "Unable to find a destination" if your Xcode SDK version doesn't match the simulator runtime. `just ios` works around this by passing `--udid` directly. Make sure a simulator is booted in Simulator.app first.
 
 If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
 

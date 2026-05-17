@@ -92,6 +92,80 @@ cd mobile && npx react-native start --reset-cache
 
 ---
 
+## `python` command not found after activating Hermit
+
+**Error:** `zsh: command not found: python`
+
+**Cause:** Hermit was initialized but the Python package was never installed into the environment. The `bin/hermit.hcl` config had no packages listed.
+
+**Fix:**
+```bash
+hermit install python3@3.12 node@20 terraform@1.7
+```
+
+Hermit tracks packages as `.pkg` symlinks in `bin/` — after installing, `python`, `python3`, `node`, and `terraform` are all available when the Hermit env is active.
+
+---
+
+## `source bin/activate-hermit` fails
+
+**Error:** `bin/activate-hermit: no such file` or the script exits immediately with an error.
+
+**Cause:** Hermit wasn't initialized in the repo.
+
+**Fix:**
+```bash
+hermit init
+source bin/activate-hermit
+```
+
+Better long-term: install shell hooks so Hermit auto-activates on `cd`:
+```bash
+hermit shell-hooks --zsh   # or --bash / --fish
+```
+
+---
+
+## Port 5432 or 8000 already in use (shared machine)
+
+**Error:**
+```
+ports are not available: exposing port TCP 0.0.0.0:5432 -> 127.0.0.1:0: bind: address already in use
+```
+or
+```
+ERROR: [Errno 48] Address already in use
+```
+
+**Cause:** Another user or process on the machine is holding the port. Common on shared dev machines.
+
+**Fix:** Override the ports in your local `.env` (not `.env.example`):
+```
+POSTGRES_PORT=5433
+API_PORT=8001
+DATABASE_URL=postgresql://trip_planner:secret@localhost:5433/trip_planner_dev
+```
+
+`docker-compose.yml` and the Justfile both read from `.env` automatically.
+
+---
+
+## `just seed` / `just dev` — ModuleNotFoundError
+
+**Error:** `ModuleNotFoundError: No module named 'dotenv'` (or similar)
+
+**Cause:** The Python venv isn't set up or `pip install -r requirements.txt` hasn't been run.
+
+**Fix:**
+```bash
+python -m venv .venv
+pip install -r requirements.txt
+```
+
+`just` commands pick up the venv automatically via the `PATH` set in the Justfile — no need to `source .venv/bin/activate`.
+
+---
+
 ## Metro — unable to resolve `@babel/runtime`
 
 **Error:**

@@ -1,5 +1,9 @@
 # Claude
 .claude/settings/local.json
+.claude/worktrees/
+
+# Hermit package cache
+.hermit/
 
 # Python
 __pycache__/
