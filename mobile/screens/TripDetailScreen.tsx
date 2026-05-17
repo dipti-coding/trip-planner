@@ -1,10 +1,8 @@
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {RouteProp} from '@react-navigation/native';
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {
   ActivityIndicator,
-  Animated,
-  FlatList,
   NativeScrollEvent,
   NativeSyntheticEvent,
   SafeAreaView,
@@ -17,53 +15,13 @@ import {
 import client from '../api/client';
 import PlanCard from '../components/PlanCard';
 import type {Plan, Trip} from '../types';
+import {dateRange, fmtDow, fmtDayLabel, fmtDayNum, fmtShort} from '../utils/dates';
 import type {RootStackParamList} from '../App';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'TripDetail'>;
   route: RouteProp<RootStackParamList, 'TripDetail'>;
 };
-
-// ─── Date helpers ─────────────────────────────────────────────────────────────
-
-function fmtShort(iso: string): string {
-  const d = new Date(iso + 'T00:00:00');
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return `${months[d.getMonth()]} ${d.getDate()}`;
-}
-
-function fmtDow(iso: string): string {
-  const d = new Date(iso + 'T00:00:00');
-  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return `${days[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}`;
-}
-
-function fmtDayLabel(iso: string): string {
-  return new Date(iso + 'T00:00:00').toLocaleDateString('en-US', {weekday: 'short'});
-}
-
-function fmtDayNum(iso: string): number {
-  return new Date(iso + 'T00:00:00').getDate();
-}
-
-// Generate all dates between start and end (inclusive)
-function dateRange(start: string, end: string): string[] {
-  const dates: string[] = [];
-  const s = new Date(start + 'T00:00:00');
-  const e = new Date(end + 'T00:00:00');
-  for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
-    dates.push(d.toISOString().slice(0, 10));
-  }
-  return dates;
-}
-
-function planDateKey(plan: Plan): string | null {
-  if (!plan.start_datetime) return null;
-  return plan.start_datetime.slice(0, 10);
-}
-
-// ─── Day strip pill ────────────────────────────────────────────────────────────
 
 function DayPill({date, active, onPress}: {date: string; active: boolean; onPress: () => void}) {
   return (
@@ -81,29 +39,17 @@ function DayPill({date, active, onPress}: {date: string; active: boolean; onPres
   );
 }
 
-// ─── Day view (plans for a single day) ────────────────────────────────────────
-
-function DayView({
-  date,
-  plans,
-}: {
-  date: string;
-  plans: Plan[];
-}) {
+function DayView({date, plans}: {date: string; plans: Plan[]}) {
   return (
     <View style={styles.dayView}>
-      {/* Day header */}
       <View style={styles.dayHeader}>
-        <View>
-          <Text style={styles.dayHeaderDate}>{fmtDow(date)}</Text>
-          <Text style={styles.dayHeaderCount}>{plans.length} plan{plans.length !== 1 ? 's' : ''}</Text>
-        </View>
+        <Text style={styles.dayHeaderDate}>{fmtDow(date)}</Text>
+        <Text style={styles.dayHeaderCount}>
+          {plans.length} plan{plans.length !== 1 ? 's' : ''}
+        </Text>
       </View>
-      {/* Plan cards */}
       <View style={styles.planList}>
-        {plans.map(p => (
-          <PlanCard key={p.id} plan={p} />
-        ))}
+        {plans.map(p => <PlanCard key={p.id} plan={p} />)}
         {plans.length === 0 && (
           <View style={styles.emptyDay}>
             <Text style={styles.emptyDayText}>Nothing planned yet</Text>
@@ -113,8 +59,6 @@ function DayView({
     </View>
   );
 }
-
-// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function TripDetailScreen({navigation, route}: Props) {
   const {tripId} = route.params;
@@ -134,16 +78,27 @@ export default function TripDetailScreen({navigation, route}: Props) {
       .then(([tripRes, plansRes]) => {
         setTrip(tripRes.data);
         setPlans(plansRes.data);
-        // start on the first day that has plans, or day 0
         const dates = dateRange(tripRes.data.start_date, tripRes.data.end_date);
         const firstWithPlans = plansRes.data[0]
-          ? dates.findIndex(d => d === planDateKey(plansRes.data[0]))
+          ? dates.findIndex(d => d === plansRes.data[0].start_datetime?.slice(0, 10))
           : 0;
         setDayIdx(Math.max(0, firstWithPlans));
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, [tripId]);
+
+  const days = useMemo(
+    () => (trip ? dateRange(trip.start_date, trip.end_date) : []),
+    [trip?.start_date, trip?.end_date],
+  );
+
+  const activeDate = days[dayIdx] ?? days[0];
+
+  const dayPlans = useMemo(
+    () => plans.filter(p => p.start_datetime?.slice(0, 10) === activeDate),
+    [plans, activeDate],
+  );
 
   const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const top = e.nativeEvent.contentOffset.y;
@@ -170,50 +125,34 @@ export default function TripDetailScreen({navigation, route}: Props) {
     );
   }
 
-  const days = dateRange(trip.start_date, trip.end_date);
-  const activeDate = days[dayIdx] ?? days[0];
-  const dayPlans = plans.filter(p => planDateKey(p) === activeDate);
-
   return (
     <View style={styles.container}>
-      {/* ── Weather header ── */}
       <View style={styles.header}>
-        <SafeAreaView style={styles.safeHeader}>
-          {/* Nav row */}
+        <SafeAreaView>
           <View style={styles.navRow}>
-            <TouchableOpacity
-              style={styles.glassBtn}
-              onPress={() => navigation.goBack()}>
+            <TouchableOpacity style={styles.glassBtn} onPress={() => navigation.goBack()}>
               <Text style={styles.glassBtnText}>‹</Text>
             </TouchableOpacity>
-
             {scrolled && (
               <Text style={styles.navTitle} numberOfLines={1}>
                 {trip.name}
               </Text>
             )}
-
             <View style={styles.glassBtnWide}>
               <Text style={styles.glassBtnWideText}>📄 PDF</Text>
             </View>
           </View>
 
-          {/* Title block — hidden when scrolled */}
           {!scrolled && (
             <View style={styles.titleBlock}>
-              <Text style={styles.destLabel}>
-                {trip.destination_city.toUpperCase()}
-              </Text>
-              <Text style={styles.tripTitle} numberOfLines={1}>
-                {trip.name}
-              </Text>
+              <Text style={styles.destLabel}>{trip.destination_city.toUpperCase()}</Text>
+              <Text style={styles.tripTitle} numberOfLines={1}>{trip.name}</Text>
               <Text style={styles.tripMeta}>
                 {fmtShort(trip.start_date)} – {fmtShort(trip.end_date)}
               </Text>
             </View>
           )}
 
-          {/* Day strip */}
           <ScrollView
             ref={stripRef}
             horizontal
@@ -232,16 +171,14 @@ export default function TripDetailScreen({navigation, route}: Props) {
         </SafeAreaView>
       </View>
 
-      {/* ── Content ── */}
       <ScrollView
         style={styles.scroll}
         onScroll={handleScroll}
         scrollEventThrottle={16}
-        contentContainerStyle={{paddingBottom: 100}}>
+        contentContainerStyle={styles.scrollContent}>
         <DayView date={activeDate} plans={dayPlans} />
       </ScrollView>
 
-      {/* ── FAB ── */}
       <View style={styles.fab}>
         <Text style={styles.fabText}>+</Text>
       </View>
@@ -249,13 +186,12 @@ export default function TripDetailScreen({navigation, route}: Props) {
   );
 }
 
-const HEADER_BG = '#1a6fad'; // sunny blue placeholder
+const HEADER_BG = '#1a6fad';
 
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: '#f4f4f4'},
   centered: {flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24},
 
-  // Header
   header: {
     backgroundColor: HEADER_BG,
     shadowColor: '#000',
@@ -264,7 +200,6 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 4,
   },
-  safeHeader: {},
   navRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -285,86 +220,51 @@ const styles = StyleSheet.create({
     textAlign: 'center', letterSpacing: -0.1,
   },
   glassBtnWide: {
-    height: 38, borderRadius: 999,
-    paddingHorizontal: 14,
+    height: 38, borderRadius: 999, paddingHorizontal: 14,
     backgroundColor: 'rgba(255,255,255,0.3)',
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.4)',
   },
   glassBtnWideText: {fontSize: 13, color: '#fff', fontWeight: '600'},
 
-  titleBlock: {
-    paddingHorizontal: 22,
-    paddingTop: 12,
-    paddingBottom: 8,
-  },
+  titleBlock: {paddingHorizontal: 22, paddingTop: 12, paddingBottom: 8},
   destLabel: {
     fontSize: 10, fontWeight: '500', letterSpacing: 0.4,
     color: 'rgba(255,255,255,0.78)', textTransform: 'uppercase',
   },
-  tripTitle: {
-    fontSize: 24, fontWeight: '600', color: '#fff',
-    letterSpacing: -0.3, marginTop: 3,
-  },
-  tripMeta: {
-    fontSize: 13, color: 'rgba(255,255,255,0.88)', marginTop: 4,
-  },
+  tripTitle: {fontSize: 24, fontWeight: '600', color: '#fff', letterSpacing: -0.3, marginTop: 3},
+  tripMeta: {fontSize: 13, color: 'rgba(255,255,255,0.88)', marginTop: 4},
 
-  // Day strip
   dayStripScroll: {flexShrink: 0},
-  dayStrip: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingBottom: 10,
-    paddingTop: 2,
-    gap: 8,
-  },
+  dayStrip: {flexDirection: 'row', paddingHorizontal: 20, paddingBottom: 10, paddingTop: 2, gap: 8},
   dayPill: {
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.22)',
-    minWidth: 52,
+    alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8,
+    borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.22)', minWidth: 52,
   },
-  dayPillActive: {
-    backgroundColor: '#fff',
-  },
+  dayPillActive: {backgroundColor: '#fff'},
   dayPillLabel: {
     fontSize: 10, fontWeight: '500', textTransform: 'uppercase',
     color: 'rgba(255,255,255,0.75)',
   },
   dayPillLabelActive: {color: HEADER_BG},
-  dayPillNum: {
-    fontSize: 16, fontWeight: '600',
-    color: 'rgba(255,255,255,0.95)', marginTop: 2,
-  },
+  dayPillNum: {fontSize: 16, fontWeight: '600', color: 'rgba(255,255,255,0.95)', marginTop: 2},
   dayPillNumActive: {color: HEADER_BG},
 
-  // Scroll body
   scroll: {flex: 1},
+  scrollContent: {paddingBottom: 100},
 
-  // Day view
   dayView: {padding: 16},
-  dayHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingHorizontal: 4,
-    marginBottom: 12,
-  },
+  dayHeader: {paddingHorizontal: 4, marginBottom: 12},
   dayHeaderDate: {fontSize: 13, color: '#525252'},
   dayHeaderCount: {fontSize: 18, fontWeight: '600', color: '#161616', letterSpacing: -0.05, marginTop: 2},
   planList: {gap: 8},
   emptyDay: {
-    backgroundColor: '#fff',
-    borderRadius: 18,
+    backgroundColor: '#fff', borderRadius: 18,
     borderWidth: 1, borderColor: '#e0e0e0',
     padding: 24, alignItems: 'center',
   },
   emptyDayText: {fontSize: 14, color: '#8d8d8d'},
 
-  // FAB
   fab: {
     position: 'absolute', bottom: 32, right: 24,
     width: 56, height: 56, borderRadius: 28,
@@ -372,9 +272,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#0f62fe',
     shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.4, shadowRadius: 8, elevation: 8,
   },
   fabText: {fontSize: 28, color: '#fff', fontWeight: '300', lineHeight: 36},
 

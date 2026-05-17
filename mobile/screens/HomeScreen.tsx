@@ -1,5 +1,5 @@
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -12,103 +12,67 @@ import {
 } from 'react-native';
 import client from '../api/client';
 import type {Trip} from '../types';
+import {dayCount, fmtShort, tripStatus} from '../utils/dates';
 import type {RootStackParamList} from '../App';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
 };
 
-function fmtDate(iso: string, short = true): string {
-  const d = new Date(iso + 'T00:00:00');
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  if (short) return `${months[d.getMonth()]} ${d.getDate()}`;
-  return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
-}
+type TripStatus = 'current' | 'future' | 'past';
+type TripWithStatus = Trip & {status: TripStatus};
 
-function dayCount(start: string, end: string): number {
-  const a = new Date(start + 'T00:00:00');
-  const b = new Date(end + 'T00:00:00');
-  return Math.round((b.getTime() - a.getTime()) / 86400000) + 1;
-}
+const BUILDINGS = [
+  {l: 0, w: 40, h: 48}, {l: 40, w: 22, h: 62}, {l: 62, w: 32, h: 54},
+  {l: 118, w: 26, h: 66}, {l: 144, w: 20, h: 56},
+  {l: 196, w: 34, h: 58}, {l: 232, w: 18, h: 48},
+  {l: 250, w: 38, h: 70}, {l: 288, w: 24, h: 54},
+  {l: 312, w: 30, h: 62}, {l: 342, w: 18, h: 48},
+];
 
-function tripStatus(start: string, end: string): 'current' | 'future' | 'past' {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const s = new Date(start + 'T00:00:00');
-  const e = new Date(end + 'T00:00:00');
-  if (today >= s && today <= e) return 'current';
-  if (today < s) return 'future';
-  return 'past';
-}
-
-// Simple city skyline using SVG-like shapes via React Native Views
 function CitySkyline() {
-  const buildings = [
-    {l: 0, w: 40, h: 48}, {l: 40, w: 22, h: 62}, {l: 62, w: 32, h: 54},
-    {l: 118, w: 26, h: 66}, {l: 144, w: 20, h: 56},
-    {l: 196, w: 34, h: 58}, {l: 232, w: 18, h: 48},
-    {l: 250, w: 38, h: 70}, {l: 288, w: 24, h: 54},
-    {l: 312, w: 30, h: 62}, {l: 342, w: 18, h: 48},
-  ];
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      {buildings.map((b, i) => (
+      {BUILDINGS.map((b, i) => (
         <View
           key={i}
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: b.l,
-            width: b.w,
-            height: b.h,
-            backgroundColor: 'rgba(20,18,30,0.55)',
-          }}
+          style={[styles.building, {left: b.l, width: b.w, height: b.h}]}
         />
       ))}
-      {/* Tower */}
-      <View style={{position:'absolute', bottom: 0, left: 97, width: 0, height: 0,
-        borderLeftWidth: 10, borderRightWidth: 10, borderBottomWidth: 80,
-        borderLeftColor: 'transparent', borderRightColor: 'transparent',
-        borderBottomColor: 'rgba(20,18,30,0.55)'}}/>
-      <View style={{position:'absolute', bottom: 0, left: 170, width: 0, height: 0,
-        borderLeftWidth: 9, borderRightWidth: 9, borderBottomWidth: 100,
-        borderLeftColor: 'transparent', borderRightColor: 'transparent',
-        borderBottomColor: 'rgba(20,18,30,0.55)'}}/>
+      <View style={styles.towerLeft} />
+      <View style={styles.towerRight} />
     </View>
   );
 }
 
-function StatusBadge({status}: {status: 'current' | 'future' | 'past'}) {
+function StatusBadge({status}: {status: TripStatus}) {
   if (status === 'current') {
     return (
-      <View style={[styles.badge, {backgroundColor: '#defbe6'}]}>
+      <View style={styles.badgeCurrent}>
         <View style={styles.badgeDot} />
-        <Text style={[styles.badgeText, {color: '#198038'}]}>In progress</Text>
+        <Text style={styles.badgeTextCurrent}>In progress</Text>
       </View>
     );
   }
   if (status === 'past') {
     return (
-      <View style={[styles.badge, {backgroundColor: 'rgba(255,255,255,0.85)'}]}>
-        <Text style={[styles.badgeText, {color: '#525252'}]}>Past</Text>
+      <View style={styles.badgePast}>
+        <Text style={styles.badgeTextPast}>Past</Text>
       </View>
     );
   }
   return null;
 }
 
-function TripCard({trip, onPress}: {trip: Trip; onPress: () => void}) {
-  const status = tripStatus(trip.start_date, trip.end_date);
+function TripCard({trip, onPress}: {trip: TripWithStatus; onPress: () => void}) {
   const days = dayCount(trip.start_date, trip.end_date);
-
   return (
     <TouchableOpacity style={styles.tripCard} onPress={onPress} activeOpacity={0.85}>
-      {/* Cover */}
       <View style={styles.cover}>
         <CitySkyline />
         <View style={[StyleSheet.absoluteFill, styles.coverScrim]} />
         <View style={styles.coverTop}>
-          <View style={{flex: 1, minWidth: 0}}>
+          <View style={styles.coverTitleBlock}>
             <Text style={styles.coverDest} numberOfLines={1}>
               {trip.destination_city.toUpperCase()}
             </Text>
@@ -116,22 +80,17 @@ function TripCard({trip, onPress}: {trip: Trip; onPress: () => void}) {
               {trip.name}
             </Text>
           </View>
-          <StatusBadge status={status} />
+          <StatusBadge status={trip.status} />
         </View>
         <View style={styles.coverBottom}>
           <Text style={styles.coverDateRange}>
-            {fmtDate(trip.start_date)} – {fmtDate(trip.end_date)}
+            {fmtShort(trip.start_date)} – {fmtShort(trip.end_date)}
           </Text>
         </View>
       </View>
-      {/* Bottom row */}
       <View style={styles.cardBottom}>
-        <View style={styles.metaPill}>
-          <Text style={styles.metaText}>📅 {days} days</Text>
-        </View>
-        <View style={styles.metaPill}>
-          <Text style={styles.metaText}>📍 {trip.destination_city}</Text>
-        </View>
+        <Text style={styles.metaText}>📅 {days} days</Text>
+        <Text style={styles.metaText}>📍 {trip.destination_city}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -150,20 +109,28 @@ export default function HomeScreen({navigation}: Props) {
       .finally(() => setLoading(false));
   }, []);
 
-  const filtered = trips.filter(t =>
-    !query ||
-    t.name.toLowerCase().includes(query.toLowerCase()) ||
-    t.destination_city.toLowerCase().includes(query.toLowerCase()),
-  );
-
-  const current = filtered.filter(t => tripStatus(t.start_date, t.end_date) === 'current');
-  const future  = filtered.filter(t => tripStatus(t.start_date, t.end_date) === 'future');
-  const past    = filtered.filter(t => tripStatus(t.start_date, t.end_date) === 'past');
-
-  const sections: {label: string; data: Trip[]}[] = [];
-  if (current.length) sections.push({label: 'Happening now', data: current});
-  if (future.length)  sections.push({label: `Upcoming · ${future.length}`, data: future});
-  if (past.length)    sections.push({label: 'Memories', data: past});
+  const sections = useMemo(() => {
+    const q = query.toLowerCase();
+    const withStatus: TripWithStatus[] = trips.map(t => ({
+      ...t,
+      status: tripStatus(t.start_date, t.end_date),
+    }));
+    const filtered = q
+      ? withStatus.filter(
+          t =>
+            t.name.toLowerCase().includes(q) ||
+            t.destination_city.toLowerCase().includes(q),
+        )
+      : withStatus;
+    const current = filtered.filter(t => t.status === 'current');
+    const future = filtered.filter(t => t.status === 'future');
+    const past = filtered.filter(t => t.status === 'past');
+    return [
+      ...(current.length ? [{label: 'Happening now', data: current}] : []),
+      ...(future.length ? [{label: `Upcoming · ${future.length}`, data: future}] : []),
+      ...(past.length ? [{label: 'Memories', data: past}] : []),
+    ];
+  }, [trips, query]);
 
   if (loading) {
     return (
@@ -184,9 +151,8 @@ export default function HomeScreen({navigation}: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
-        <View style={{flex: 1}}>
+        <View style={styles.headerLeft}>
           <Text style={styles.headerDate}>
             {new Date().toLocaleDateString('en-US', {weekday: 'long', month: 'long', day: 'numeric'})}
           </Text>
@@ -197,7 +163,6 @@ export default function HomeScreen({navigation}: Props) {
         </View>
       </View>
 
-      {/* Search */}
       <View style={styles.searchWrap}>
         <Text style={styles.searchIcon}>🔍</Text>
         <TextInput
@@ -212,7 +177,7 @@ export default function HomeScreen({navigation}: Props) {
       <FlatList
         data={sections}
         keyExtractor={s => s.label}
-        contentContainerStyle={{paddingBottom: 40}}
+        contentContainerStyle={styles.listContent}
         renderItem={({item: section}) => (
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>{section.label}</Text>
@@ -220,7 +185,9 @@ export default function HomeScreen({navigation}: Props) {
               <TripCard
                 key={trip.id}
                 trip={trip}
-                onPress={() => navigation.navigate('TripDetail', {tripId: trip.id, tripName: trip.name})}
+                onPress={() =>
+                  navigation.navigate('TripDetail', {tripId: trip.id, tripName: trip.name})
+                }
               />
             ))}
           </View>
@@ -236,9 +203,13 @@ export default function HomeScreen({navigation}: Props) {
   );
 }
 
+const BUILDING_COLOR = 'rgba(20,18,30,0.55)';
+
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: '#f4f4f4'},
   centered: {flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24},
+  listContent: {paddingBottom: 40},
+
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -246,6 +217,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 16,
   },
+  headerLeft: {flex: 1},
   headerDate: {fontSize: 13, color: '#525252'},
   headerTitle: {fontSize: 28, fontWeight: '700', color: '#161616', letterSpacing: -0.32, marginTop: 2},
   addBtn: {
@@ -254,6 +226,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   addBtnText: {fontSize: 22, color: '#fff', fontWeight: '300', lineHeight: 28},
+
   searchWrap: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#e8e8e8', borderRadius: 12,
@@ -262,12 +235,14 @@ const styles = StyleSheet.create({
   },
   searchIcon: {fontSize: 16},
   searchInput: {flex: 1, fontSize: 15, color: '#161616'},
+
   section: {paddingHorizontal: 20, marginBottom: 24},
   sectionLabel: {
     fontSize: 11, fontWeight: '500', letterSpacing: 0.32,
     textTransform: 'uppercase', color: '#8d8d8d',
     paddingVertical: 6, paddingHorizontal: 4, marginBottom: 4,
   },
+
   tripCard: {
     backgroundColor: '#ffffff',
     borderRadius: 18,
@@ -276,54 +251,51 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: 12,
   },
-  cover: {
-    height: 140,
-    backgroundColor: '#2a1f3d',
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  coverScrim: {
-    backgroundColor: 'rgba(0,0,0,0.25)',
-  },
+  cover: {height: 140, backgroundColor: '#2a1f3d', overflow: 'hidden'},
+  coverScrim: {backgroundColor: 'rgba(0,0,0,0.25)'},
   coverTop: {
-    position: 'absolute',
-    top: 12, left: 14, right: 14,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    zIndex: 1,
+    position: 'absolute', top: 12, left: 14, right: 14,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', zIndex: 1,
   },
-  coverDest: {
-    fontSize: 11, fontWeight: '500', letterSpacing: 0.4,
-    color: 'rgba(255,255,255,0.9)',
-  },
-  coverTitle: {
-    fontSize: 22, fontWeight: '600', color: '#fff',
-    letterSpacing: -0.2, marginTop: 2,
-  },
-  coverBottom: {
-    position: 'absolute',
-    bottom: 10, left: 14, right: 14,
-    zIndex: 1,
-  },
-  coverDateRange: {
-    fontSize: 13, color: 'rgba(255,255,255,0.9)',
-  },
-  badge: {
+  coverTitleBlock: {flex: 1, minWidth: 0},
+  coverDest: {fontSize: 11, fontWeight: '500', letterSpacing: 0.4, color: 'rgba(255,255,255,0.9)'},
+  coverTitle: {fontSize: 22, fontWeight: '600', color: '#fff', letterSpacing: -0.2, marginTop: 2},
+  coverBottom: {position: 'absolute', bottom: 10, left: 14, right: 14, zIndex: 1},
+  coverDateRange: {fontSize: 13, color: 'rgba(255,255,255,0.9)'},
+
+  badgeCurrent: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4,
+    backgroundColor: '#defbe6',
   },
-  badgeDot: {
-    width: 6, height: 6, borderRadius: 3,
-    backgroundColor: '#198038',
+  badgePast: {
+    flexDirection: 'row', alignItems: 'center',
+    borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4,
+    backgroundColor: 'rgba(255,255,255,0.85)',
   },
-  badgeText: {fontSize: 12, fontWeight: '500'},
-  cardBottom: {
-    flexDirection: 'row', gap: 12,
-    padding: 12, paddingTop: 10,
-  },
-  metaPill: {flexDirection: 'row', alignItems: 'center'},
+  badgeDot: {width: 6, height: 6, borderRadius: 3, backgroundColor: '#198038'},
+  badgeTextCurrent: {fontSize: 12, fontWeight: '500', color: '#198038'},
+  badgeTextPast: {fontSize: 12, fontWeight: '500', color: '#525252'},
+
+  cardBottom: {flexDirection: 'row', gap: 12, padding: 12, paddingTop: 10},
   metaText: {fontSize: 13, color: '#525252'},
+
+  building: {position: 'absolute', bottom: 0, backgroundColor: BUILDING_COLOR},
+  towerLeft: {
+    position: 'absolute', bottom: 0, left: 97,
+    width: 0, height: 0,
+    borderLeftWidth: 10, borderRightWidth: 10, borderBottomWidth: 80,
+    borderLeftColor: 'transparent', borderRightColor: 'transparent',
+    borderBottomColor: BUILDING_COLOR,
+  },
+  towerRight: {
+    position: 'absolute', bottom: 0, left: 170,
+    width: 0, height: 0,
+    borderLeftWidth: 9, borderRightWidth: 9, borderBottomWidth: 100,
+    borderLeftColor: 'transparent', borderRightColor: 'transparent',
+    borderBottomColor: BUILDING_COLOR,
+  },
+
   errorText: {fontSize: 15, color: '#da1e28', textAlign: 'center'},
   hintText: {fontSize: 13, color: '#8d8d8d', marginTop: 8, textAlign: 'center'},
   emptyText: {fontSize: 16, color: '#525252', fontWeight: '500'},
