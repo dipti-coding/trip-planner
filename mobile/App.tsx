@@ -1,6 +1,9 @@
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import React from 'react';
+import {enableScreens} from 'react-native-screens';
+
+enableScreens();
 import HomeScreen from './screens/HomeScreen';
 import TripDetailScreen from './screens/TripDetailScreen';
 
