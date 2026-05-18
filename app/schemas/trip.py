@@ -4,6 +4,14 @@ from uuid import UUID
 from pydantic import BaseModel
 
 
+class TripCreate(BaseModel):
+    user_id: UUID  # placeholder — replaced by authenticated user in Week 4
+    name: str
+    destination_city: str
+    start_date: date
+    end_date: date
+
+
 class TripResponse(BaseModel):
     id: UUID
     user_id: UUID
