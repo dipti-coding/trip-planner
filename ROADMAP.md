@@ -84,37 +84,28 @@ Xcode Simulator displaying a seeded trip list and plan list fetched live from lo
 
 ---
 
-## Week 2 — Auth + Core Endpoints + Booking Text Parsing
+## Week 2 — Plan Creation + Text Parsing
 
-**Goal:** Auth wired up, full CRUD endpoints in place, and booking text parsed into structured plans.
+**Goal:** Users can manually create any plan type and paste a flight or hotel confirmation to auto-create a plan — no auth required yet.
 
 ### Backend
-- [ ] Project setup (Postgres + AWS Auth)
-- [ ] Auth routes: POST `/auth/register`, POST `/auth/login`
-- [ ] User profile routes: GET/PUT `/users/me` (home city, preferences)
-- [ ] Trip routes: POST `/trips`, GET `/trips`, GET `/trips/{trip_id}` (auth-gated)
-- [ ] Plan routes: GET `/trips/{trip_id}/plans`, DELETE `/plans/{plan_id}`
-- [ ] Integrate text parsing library
-- [ ] Build `POST /trips/{trip_id}/plans/parse` endpoint
-  - Accepts raw pasted text
-  - Sends to parsing library to extract plan type, title, dates/times, confirmation numbers, location, relevant details
-  - Returns structured plan JSON and persists to DB
-- [ ] Build `POST /trips/{trip_id}/plans` for manual plan creation (non-parsed)
-- [ ] Plan `details` field uses JSONB to store type-specific fields (e.g. flight: airline, flight number, seat; hotel: check-in, check-out, room type)
-- [ ] Input validation and graceful error handling if booking text cannot be parsed correctly
+- [ ] `POST /trips` — create a trip (name, destination, dates)
+- [ ] `POST /trips/{trip_id}/plans` — manual plan creation for all 13 plan types; validates type-specific `details` fields per type
+- [ ] Integrate text parsing library (external or in-house)
+- [ ] `POST /trips/{trip_id}/plans/parse` — accepts raw pasted confirmation text, extracts structured plan (Flight + Hotel to start), persists and returns the created plan
+- [ ] `DELETE /plans/{plan_id}` — delete a plan
+- [ ] Input validation and graceful error response if text cannot be parsed
+- [ ] Generate and expose OpenAPI schema at `/docs`
 
 ### Mobile
-- [ ] Auth flow: sign up, log in, persist session token
-- [ ] Scaffold screen structure: Auth, Home (trip list), Trip Detail, Add Plan
-- [ ] Generate TypeScript types from FastAPI OpenAPI schema
-- [ ] Trip Detail screen: display trip metadata + list of plans sorted by date/time
-- [ ] Plan card components for each plan type with relevant icon
-- [ ] Paste-box screen: text input → calls `/parse` endpoint → shows parsed result for confirmation before saving
-- [ ] Manual plan creation form (type selector + basic fields)
-- [ ] Delete plan with swipe gesture
+- [ ] Generate TypeScript types from FastAPI OpenAPI schema (`openapi-typescript`)
+- [ ] Add Plan flow: type selector screen → per-type form → `POST /trips/{trip_id}/plans`
+- [ ] Paste-box screen: text input → calls `/parse` → shows parsed result for user confirmation → saves on confirm
+- [ ] Newly created/parsed plans appear on TripDetailScreen immediately
+- [ ] Delete plan with swipe gesture → calls `DELETE /plans/{plan_id}`
 
 ### Deliverable
-Auth, user profile, End-to-end flow: create a trip → paste a flight or hotel confirmation → confirm parsed result → view it on the trip timeline.
+End-to-end plan creation: manually add any plan type, or paste a flight/hotel confirmation and confirm the parsed result — all visible on the trip timeline.
 
 ---
 
@@ -139,18 +130,21 @@ A complete trip view with weather, and the ability to generate a PDF version of 
 
 ---
 
-## Week 4 — Polish, Testing + Deployment
+## Week 4 — Auth + Polish, Testing + Deployment
 
-**Goal:** MVP is stable, deployed, and ready for TestFlight.
+**Goal:** Auth wired up, MVP is stable, deployed, and ready for TestFlight.
 
 ### Backend
+- [ ] Auth routes: `POST /auth/register`, `POST /auth/login` (AWS Auth)
+- [ ] User profile routes: `GET /users/me`, `PUT /users/me` (home city, preferences)
+- [ ] Gate all trip and plan endpoints with auth
 - [ ] Deploy FastAPI (environment variables, Postgres connection, health check)
 - [ ] Add request logging and basic error monitoring (TBD: Sentry)
 - [ ] End-to-end API testing for all core flows
 
 ### Mobile
+- [ ] Auth flow: sign up, log in, log out, persist session token
 - [ ] Connect all screens to production API (not localhost)
-- [ ] Auth flow polish: sign up, log in, log out, persist session
 - [ ] Loading states, error states, and empty states on all screens
 - [ ] App icon, splash screen, basic branding
 - [ ] EAS Build setup and submit to TestFlight for internal testing
