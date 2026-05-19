@@ -4,6 +4,14 @@ from uuid import UUID
 from pydantic import BaseModel
 
 from app.models.plan import PlanType
+
+
+class PlanCreate(BaseModel):
+    type: PlanType
+    title: str
+    start_datetime: datetime | None = None
+    end_datetime: datetime | None = None
+    details: dict = {}
 from app.schemas.plan_details import (
     ActivityDetails,
     RestaurantDetails,
