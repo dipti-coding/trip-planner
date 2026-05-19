@@ -3,12 +3,16 @@ import type {RouteProp} from '@react-navigation/native';
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -69,6 +73,38 @@ export default function TripDetailScreen({navigation, route}: Props) {
   const [dayIdx, setDayIdx] = useState(0);
   const [scrolled, setScrolled] = useState(false);
   const stripRef = useRef<ScrollView>(null);
+
+  const [addingPlan, setAddingPlan] = useState(false);
+  const [rawText, setRawText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [parseError, setParseError] = useState<string | null>(null);
+
+  const closeModal = () => {
+    setAddingPlan(false);
+    setRawText('');
+    setParseError(null);
+  };
+
+  const handleParseAndCreate = async () => {
+    if (!rawText.trim()) return;
+    setSubmitting(true);
+    setParseError(null);
+    try {
+      await client.post(`/trips/${tripId}/plans/parse-and-create`, {raw_text: rawText});
+      const plansRes = await client.get<Plan[]>(`/trips/${tripId}/plans`);
+      setPlans(plansRes.data);
+      closeModal();
+    } catch (e: any) {
+      const detail = e.response?.data?.detail;
+      setParseError(
+        typeof detail === 'string'
+          ? detail
+          : 'Could not detect plan type. Try pasting more of the confirmation email.',
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     Promise.all([
@@ -179,9 +215,49 @@ export default function TripDetailScreen({navigation, route}: Props) {
         <DayView date={activeDate} plans={dayPlans} />
       </ScrollView>
 
-      <View style={styles.fab}>
-        <Text style={styles.fabText}>+</Text>
-      </View>
+      <TouchableOpacity style={styles.fab} onPress={() => setAddingPlan(true)} activeOpacity={0.85}>
+        <Text style={styles.fabText}>Add Plan</Text>
+      </TouchableOpacity>
+
+      <Modal visible={addingPlan} animationType="slide" transparent onRequestClose={closeModal}>
+        <View style={styles.modalOverlay}>
+          <KeyboardAvoidingView style={{flex: 1}} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <TouchableOpacity style={{flex: 1}} onPress={closeModal} activeOpacity={1} />
+            <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Paste confirmation</Text>
+            <Text style={styles.modalSubtitle}>
+              Paste text from a booking confirmation email to auto-create a plan.
+            </Text>
+            <TextInput
+              style={styles.textInput}
+              multiline
+              placeholder="Your booking confirmation text..."
+              placeholderTextColor="#a8a8a8"
+              value={rawText}
+              onChangeText={setRawText}
+              autoFocus
+              textAlignVertical="top"
+            />
+            {parseError ? <Text style={styles.parseError}>{parseError}</Text> : null}
+            <TouchableOpacity
+              style={[styles.parseBtn, (!rawText.trim() || submitting) && styles.parseBtnDisabled]}
+              onPress={handleParseAndCreate}
+              disabled={!rawText.trim() || submitting}
+              activeOpacity={0.8}>
+              {submitting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.parseBtnText}>Add Plan</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity onPress={closeModal} style={styles.cancelBtn}>
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -267,14 +343,42 @@ const styles = StyleSheet.create({
 
   fab: {
     position: 'absolute', bottom: 32, right: 24,
-    width: 56, height: 56, borderRadius: 28,
+    height: 48, borderRadius: 24, paddingHorizontal: 20,
     backgroundColor: '#0f62fe',
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#0f62fe',
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.4, shadowRadius: 8, elevation: 8,
   },
-  fabText: {fontSize: 28, color: '#fff', fontWeight: '300', lineHeight: 36},
+  fabText: {fontSize: 15, color: '#fff', fontWeight: '600'},
+
+  modalOverlay: {flex: 1, backgroundColor: 'rgba(0,0,0,0.4)'},
+  modalSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    padding: 24, paddingBottom: 40,
+  },
+  modalHandle: {
+    width: 36, height: 4, borderRadius: 2,
+    backgroundColor: '#e0e0e0',
+    alignSelf: 'center', marginBottom: 20,
+  },
+  modalTitle: {fontSize: 18, fontWeight: '600', color: '#161616', marginBottom: 4},
+  modalSubtitle: {fontSize: 13, color: '#525252', marginBottom: 16},
+  textInput: {
+    borderWidth: 1, borderColor: '#e0e0e0', borderRadius: 12,
+    padding: 12, height: 160, fontSize: 14, color: '#161616',
+    backgroundColor: '#f4f4f4', marginBottom: 12,
+  },
+  parseError: {fontSize: 13, color: '#da1e28', marginBottom: 12},
+  parseBtn: {
+    backgroundColor: '#0f62fe', borderRadius: 12,
+    paddingVertical: 14, alignItems: 'center', marginBottom: 8,
+  },
+  parseBtnDisabled: {opacity: 0.45},
+  parseBtnText: {fontSize: 15, fontWeight: '600', color: '#fff'},
+  cancelBtn: {alignItems: 'center', paddingVertical: 10},
+  cancelText: {fontSize: 15, color: '#525252'},
 
   errorText: {fontSize: 15, color: '#da1e28', textAlign: 'center'},
   backLink: {fontSize: 15, color: '#0f62fe', marginTop: 12},
