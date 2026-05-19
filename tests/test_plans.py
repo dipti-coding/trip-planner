@@ -167,7 +167,7 @@ def test_parse_car_reservation(client, user):
         "raw_text": (
             "Enterprise Car Rental\n"
             "Pickup location: LAX Airport\nDropoff location: Downtown LA\n"
-            "Car type: Compact\nConfirmation: CARZZ123\nJuly 1, 2026"
+            "Car type: Compact\nConfirmation: CARZZ123\\nJune 15, 2026"
         )
     })
     assert resp.status_code == 201
@@ -244,7 +244,7 @@ def test_parse_bus(client, user):
             "Greyhound Bus Ticket\n"
             "Departs from terminal: New York Port Authority\n"
             "Drop-off at terminal: Philadelphia Bus Terminal\n"
-            "Seat: 15A\nConfirmation: BUS43210\nJuly 1, 2026"
+            "Seat: 15A\nConfirmation: BUS43210\nJune 20, 2026"
         )
     })
     assert resp.status_code == 201
@@ -259,13 +259,26 @@ def test_parse_local_event(client, user):
         "raw_text": (
             "TAYLOR SWIFT - THE ERAS TOUR\n"
             "Venue: SoFi Stadium\nSeat: Section 101 Row E Seat 12\n"
-            "Order: TSWFT9876\nAugust 3, 2026"
+            "Order: TSWFT9876\nJune 25, 2026"
         )
     })
     assert resp.status_code == 201
     data = resp.json()
     assert data["type"] == "LocalEvent"
     assert data["details"].get("venue") is not None
+
+
+def test_parse_date_outside_trip_range(client, user):
+    # Trip runs June 1–30 2026; confirmation text has a Nov 2025 date
+    trip = _make_trip(client, user)
+    resp = client.post(f"/trips/{trip['id']}/plans/parse-and-create", json={
+        "raw_text": (
+            "Your flight DL 100 departs SFO on 8 Nov 2025 at 09:25. "
+            "Arrives JFK. Confirmation: ABCDEF."
+        )
+    })
+    assert resp.status_code == 422
+    assert "outside this trip" in resp.json()["detail"]
 
 
 def test_parse_unrecognized_text(client, user):
