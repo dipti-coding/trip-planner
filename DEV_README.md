@@ -210,6 +210,121 @@ curl -s http://localhost:8000/trips/00000000-0000-0000-0000-000000000000/plans
 
 ---
 
+## Plan Creation Endpoints
+
+These endpoints let you create trips and plans manually. Run `just dev` and `just seed` first so a seeded user ID is available.
+
+**Get a user ID from the seeded data:**
+
+```bash
+curl -s http://localhost:8000/trips | python3 -c "import sys,json; t=json.load(sys.stdin); print(t[0]['user_id'])"
+```
+
+### Create a trip
+
+```bash
+curl -s -X POST http://localhost:8000/trips \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "<user_id>",
+    "name": "Rome Fall 2026",
+    "destination_city": "Rome, Italy",
+    "start_date": "2026-10-01",
+    "end_date": "2026-10-08"
+  }' | python3 -m json.tool
+```
+
+Copy the `id` from the response — you'll use it as `<trip_id>` below.
+
+### Create a Flight plan
+
+```bash
+curl -s -X POST http://localhost:8000/trips/<trip_id>/plans \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "Flight",
+    "title": "JFK → FCO — Alitalia AZ 608",
+    "start_datetime": "2026-10-01T09:00:00Z",
+    "end_datetime": "2026-10-01T22:30:00Z",
+    "details": {
+      "airline": "Alitalia",
+      "flight_number": "AZ 608",
+      "departure_airport": "JFK",
+      "arrival_airport": "FCO",
+      "seat": "12A",
+      "cabin_class": "Economy"
+    }
+  }' | python3 -m json.tool
+```
+
+### Create a Hotel plan
+
+```bash
+curl -s -X POST http://localhost:8000/trips/<trip_id>/plans \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "Hotel",
+    "title": "Hotel de Russie",
+    "start_datetime": "2026-10-01T23:00:00Z",
+    "end_datetime": "2026-10-08T11:00:00Z",
+    "details": {
+      "room_type": "Superior Room",
+      "confirmation": "HDR20261001"
+    }
+  }' | python3 -m json.tool
+```
+
+### Create a plan with no details (e.g. Activity)
+
+`details` is optional — omit it or pass `{}` for plan types with no required fields.
+
+```bash
+curl -s -X POST http://localhost:8000/trips/<trip_id>/plans \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "Activity",
+    "title": "Colosseum Tour",
+    "start_datetime": "2026-10-03T09:00:00Z"
+  }' | python3 -m json.tool
+```
+
+### Invalid details — expect 422
+
+Sending a wrong type for a field returns a structured validation error:
+
+```bash
+curl -s -X POST http://localhost:8000/trips/<trip_id>/plans \
+  -H "Content-Type: application/json" \
+  -d '{"type": "Restaurant", "title": "Dinner", "details": {"party_size": "four"}}' \
+  | python3 -m json.tool
+```
+
+### Delete a plan
+
+```bash
+curl -s -o /dev/null -w "%{http_code}" -X DELETE http://localhost:8000/plans/<plan_id>
+# 204
+```
+
+### Supported plan types
+
+All 13 types are accepted for `type`. Each has its own optional `details` fields — see `app/schemas/plan_details.py` for the full field list per type.
+
+| Type | Key detail fields |
+|---|---|
+| `Flight` | `airline`, `flight_number`, `departure_airport`, `arrival_airport`, `seat`, `cabin_class` |
+| `Hotel` | `room_type`, `confirmation`, `loyalty_number` |
+| `Activity` | `location`, `notes` |
+| `Restaurant` | `reservation_name`, `party_size`, `confirmation` |
+| `RailwayRide` | `departure_station`, `arrival_station`, `train_number`, `seat` |
+| `CarReservation` | `rental_company`, `pickup_location`, `dropoff_location`, `car_type` |
+| `Tour` | `operator`, `meeting_point`, `confirmation` |
+| `LocalEvent` | `venue`, `seat`, `event_type` |
+| `Meeting` | `meeting_link`, `organizer`, `attendees` |
+| `Ferry` / `Cruise` / `BusRide` / `MapDestination` | See `plan_details.py` |
+
+---
+
 ## Run Tests
 
 ```bash
