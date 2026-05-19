@@ -12,6 +12,10 @@ class PlanCreate(BaseModel):
     start_datetime: datetime | None = None
     end_datetime: datetime | None = None
     details: dict = {}
+
+
+class ParseAndCreateRequest(BaseModel):
+    raw_text: str
 from app.schemas.plan_details import (
     ActivityDetails,
     RestaurantDetails,
