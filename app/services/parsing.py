@@ -47,16 +47,24 @@ def _first_match(pattern: str, text: str, flags: int = re.IGNORECASE) -> str | N
     return m.group(1).strip() if m else None
 
 
+_MONTHS = (
+    r'(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|'
+    r'Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)'
+)
+
+# (?!\d) prevents matching leading digits of a year (e.g. "20" from "2026")
+_DATE_RE = re.compile(
+    r'\b' + _MONTHS + r'\s+\d{1,2}(?!\d)(?:,?\s*\d{4})?'   # Jun 16, 2026 / June 16 2026
+    r'|\b\d{1,2}(?!\d)\s+' + _MONTHS + r'(?:,?\s*\d{4})?'   # 16 Jun 2026 / 16 June 2026
+    r'|\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b'                    # 06/16/2026
+    r'|\b\d{4}-\d{2}-\d{2}\b',                                # 2026-06-16
+    re.IGNORECASE,
+)
+
+
 def _extract_dates(text: str) -> tuple[datetime | None, datetime | None]:
     """Return up to two dates found in text as (start, end). Uses fuzzy dateutil parsing."""
-    # Find date-like substrings to avoid parsing entire sentences
-    date_pattern = re.compile(
-        r'\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|'
-        r'Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)'
-        r'\s+\d{1,2}(?:,\s*\d{4})?|\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}-\d{2}-\d{2}',
-        re.IGNORECASE,
-    )
-    raw_dates = date_pattern.findall(text)
+    raw_dates = _DATE_RE.findall(text)
     parsed: list[datetime] = []
     for raw in raw_dates:
         try:
