@@ -88,6 +88,17 @@ Xcode Simulator displaying a seeded trip list and plan list fetched live from lo
 
 **Goal:** Users can manually create any plan type and paste a flight or hotel confirmation to auto-create a plan — no auth required yet.
 
+### Containerization
+- [ ] `Dockerfile` for FastAPI — multi-stage build (deps layer + app layer); runs `uvicorn` as entrypoint
+- [ ] Update `docker-compose.yml` to add a `backend` service alongside `postgres`; backend waits on Postgres health check before starting
+- [ ] `Dockerfile.metro` for the React Native Metro bundler — Node image, installs `mobile/` deps, exposes port 8081
+- [ ] Add `metro` service to `docker-compose.yml`; host network mode so the iOS Simulator can reach it at `localhost:8081`
+- [ ] `just docker-dev` command — brings up `postgres` + `backend` + `metro` in one command; replaces running each service manually
+- [ ] `just logs` tails all service logs; `just logs backend` and `just logs metro` tail a single service; output includes timestamps and service name prefix
+- [ ] Document full Docker dev workflow in `DEV_README.md`: single `just docker-dev` to start the stack, `Cmd+R` in Simulator to connect, `just logs` to stream logs
+
+> **Note:** iOS Simulator builds still require Xcode on macOS and cannot run inside Docker. Docker covers the backend and Metro bundler; the native build step (`npx react-native run-ios`) remains a local command.
+
 ### Backend
 - [ ] `POST /trips` — create a trip (name, destination, dates)
 - [ ] `POST /trips/{trip_id}/plans` — manual plan creation for all 13 plan types; validates type-specific `details` fields per type
