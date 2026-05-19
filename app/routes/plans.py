@@ -62,6 +62,15 @@ def parse_and_create_plan(trip_id: UUID, body: ParseAndCreateRequest, db: Sessio
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
+    if start_dt and not (trip.start_date <= start_dt.date() <= trip.end_date):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Plan date {start_dt.strftime('%b %-d, %Y')} is outside this trip's dates "
+                f"({trip.start_date.strftime('%b %-d')} – {trip.end_date.strftime('%b %-d, %Y')})"
+            ),
+        )
+
     details_schema = PLAN_DETAILS_SCHEMA[plan_type]
     validated_details = details_schema(**details).model_dump(exclude_none=True)
 
