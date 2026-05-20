@@ -8,7 +8,7 @@
 | Backend | FastAPI (Python) |
 | Database | PostgreSQL (Aurora) |
 | Auth | AWS Auth |
-| Booking Text Parsing | External library or in-house parsing logic |
+| Booking Text Parsing | In-house regex parsing + Tesseract OCR (pytesseract) |
 | Deployment | Justfiles | Hermit | Terraform | Docker Compose | NPM |
 | Type Sync | openapi-typescript (FastAPI schema → RN types) |
 
@@ -18,7 +18,7 @@
 
 1. User profile tied to email with home city and travel activity preferences
 2. Create a trip (name, destination, dates) and receive a Trip ID
-3. Paste hotel/flight confirmation text → Text parsed → plan added to trip
+3. Paste confirmation text or pick a screenshot → OCR + text parsing → plan added to trip
 4. Supported plan types: Activity, Restaurant, Meeting, Flight, Hotel, Tour, Car Reservation, Cruise, Ferry Ride, Map Destination, Railway Ride, Bus Ride, Local Event
 5. Support download of PDF version of trip 
 6. Live weather icons displayed next to each plan
@@ -91,8 +91,9 @@ Xcode Simulator displaying a seeded trip list and plan list fetched live from lo
 ### Backend
 - [ ] `POST /trips` — create a trip (name, destination, dates)
 - [ ] `POST /trips/{trip_id}/plans` — manual plan creation for all 13 plan types; validates type-specific `details` fields per type
-- [ ] Integrate text parsing library (external or in-house)
-- [ ] `POST /trips/{trip_id}/plans/parse` — accepts raw pasted confirmation text, extracts structured plan (Flight + Hotel to start), persists and returns the created plan
+- [ ] In-house regex text parsing across all 13 plan types
+- [ ] `POST /trips/{trip_id}/plans/parse-and-create` — accepts raw pasted confirmation text, extracts structured plan, persists and returns the created plan
+- [ ] `POST /trips/{trip_id}/plans/parse-screenshot` — accepts image upload, runs Tesseract OCR to extract text, feeds into same parsing pipeline
 - [ ] `DELETE /plans/{plan_id}` — delete a plan
 - [ ] Input validation and graceful error response if text cannot be parsed
 - [ ] Generate and expose OpenAPI schema at `/docs`
@@ -100,7 +101,7 @@ Xcode Simulator displaying a seeded trip list and plan list fetched live from lo
 ### Mobile
 - [ ] Generate TypeScript types from FastAPI OpenAPI schema (`openapi-typescript`)
 - [ ] Add Plan flow: type selector screen → per-type form → `POST /trips/{trip_id}/plans`
-- [ ] Paste-box screen: text input → calls `/parse` → shows parsed result for user confirmation → saves on confirm
+- [ ] AddPlan modal with Paste / Screenshot tab toggle: paste mode sends raw text to `parse-and-create`; screenshot mode picks from photo library and sends image to `parse-screenshot`
 - [ ] Newly created/parsed plans appear on TripDetailScreen immediately
 - [ ] Delete plan with swipe gesture → calls `DELETE /plans/{plan_id}`
 
