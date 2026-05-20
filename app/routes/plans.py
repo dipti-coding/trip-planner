@@ -1,5 +1,6 @@
 from uuid import UUID
 
+import pytesseract
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
@@ -103,6 +104,8 @@ async def parse_screenshot_and_create_plan(
     image_bytes = await image.read()
     try:
         raw_text = extract_text_from_image(image_bytes)
+    except pytesseract.TesseractNotFoundError:
+        raise HTTPException(status_code=500, detail="OCR engine not available — run: brew install tesseract")
     except Exception:
         raise HTTPException(status_code=422, detail="Could not read image")
 
