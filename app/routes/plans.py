@@ -1,12 +1,13 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models import Plan, Trip
 from app.schemas.plan import PLAN_DETAILS_SCHEMA, ParseAndCreateRequest, PlanCreate, PlanResponse
+from app.services.ocr import extract_text_from_image
 from app.services.parsing import parse_confirmation_text
 
 router = APIRouter(tags=["plans"])
@@ -51,14 +52,9 @@ def create_plan(trip_id: UUID, body: PlanCreate, db: Session = Depends(get_db)):
     return plan
 
 
-@router.post("/trips/{trip_id}/plans/parse-and-create", response_model=PlanResponse, status_code=201)
-def parse_and_create_plan(trip_id: UUID, body: ParseAndCreateRequest, db: Session = Depends(get_db)):
-    trip = db.query(Trip).filter(Trip.id == trip_id).first()
-    if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
-
+def _create_plan_from_text(trip: Trip, raw_text: str, db: Session) -> Plan:
     try:
-        plan_type, title, start_dt, end_dt, details = parse_confirmation_text(body.raw_text)
+        plan_type, title, start_dt, end_dt, details = parse_confirmation_text(raw_text)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
@@ -75,7 +71,7 @@ def parse_and_create_plan(trip_id: UUID, body: ParseAndCreateRequest, db: Sessio
     validated_details = details_schema(**details).model_dump(exclude_none=True)
 
     plan = Plan(
-        trip_id=trip_id,
+        trip_id=trip.id,
         type=plan_type,
         title=title,
         start_datetime=start_dt,
@@ -86,6 +82,31 @@ def parse_and_create_plan(trip_id: UUID, body: ParseAndCreateRequest, db: Sessio
     db.commit()
     db.refresh(plan)
     return plan
+
+
+@router.post("/trips/{trip_id}/plans/parse-and-create", response_model=PlanResponse, status_code=201)
+def parse_and_create_plan(trip_id: UUID, body: ParseAndCreateRequest, db: Session = Depends(get_db)):
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    return _create_plan_from_text(trip, body.raw_text, db)
+
+
+@router.post("/trips/{trip_id}/plans/parse-screenshot", response_model=PlanResponse, status_code=201)
+async def parse_screenshot_and_create_plan(
+    trip_id: UUID, image: UploadFile = File(...), db: Session = Depends(get_db)
+):
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    image_bytes = await image.read()
+    try:
+        raw_text = extract_text_from_image(image_bytes)
+    except Exception:
+        raise HTTPException(status_code=422, detail="Could not read image")
+
+    return _create_plan_from_text(trip, raw_text, db)
 
 
 @router.delete("/plans/{plan_id}", status_code=204)
