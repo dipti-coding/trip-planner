@@ -32,6 +32,10 @@ logs:
 seed:
     python scripts/seed.py
 
+# Test OCR + parsing on a screenshot: just test-ocr <image_path>
+test-ocr image:
+    PYTHONPATH=. python scripts/test_ocr.py {{image}}
+
 # Verify the ping endpoint is responding
 ping:
     curl -s http://localhost:${API_PORT:-8000}/ping | python3 -m json.tool
