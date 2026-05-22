@@ -1,4 +1,12 @@
+import io
+import io
 import uuid
+from unittest.mock import patch
+
+from PIL import Image, ImageDraw
+from unittest.mock import patch
+
+from PIL import Image, ImageDraw
 
 
 def test_create_flight_plan(client, user):
@@ -293,4 +301,54 @@ def test_parse_trip_not_found(client):
     resp = client.post(f"/trips/{uuid.uuid4()}/plans/parse-and-create", json={
         "raw_text": "Your flight DL 405 departs SFO. Confirmation: ABCDEF."
     })
+    assert resp.status_code == 404
+
+
+# ── parse-screenshot tests ─────────────────────────────────────────────────────
+
+def _make_png(text: str) -> bytes:
+    img = Image.new("RGB", (400, 100), color="white")
+    ImageDraw.Draw(img).text((10, 10), text, fill="black")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
+
+
+_FLIGHT_TEXT = (
+    "Your flight DL 405 departs from SFO on June 1, 2026 and arrives at JFK. "
+    "Airline: Delta. Seat: 12A. Confirmation: ABCDEF."
+)
+
+
+def test_parse_screenshot_creates_plan(client, user):
+    trip = _make_trip(client, user)
+    png = _make_png(_FLIGHT_TEXT)
+    with patch("app.routes.plans.extract_text_from_image", return_value=_FLIGHT_TEXT):
+        resp = client.post(
+            f"/trips/{trip['id']}/plans/parse-screenshot",
+            files={"image": ("screenshot.png", png, "image/png")},
+        )
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["type"] == "Flight"
+    assert data["details"].get("flight_number") == "DL 405"
+
+
+def test_parse_screenshot_invalid_image(client, user):
+    trip = _make_trip(client, user)
+    with patch("app.routes.plans.extract_text_from_image", side_effect=Exception("bad image")):
+        resp = client.post(
+            f"/trips/{trip['id']}/plans/parse-screenshot",
+            files={"image": ("bad.png", b"not an image", "image/png")},
+        )
+    assert resp.status_code == 422
+    assert resp.json()["detail"] == "Could not read image"
+
+
+def test_parse_screenshot_trip_not_found(client):
+    png = _make_png("some text")
+    resp = client.post(
+        f"/trips/{uuid.uuid4()}/plans/parse-screenshot",
+        files={"image": ("screenshot.png", png, "image/png")},
+    )
     assert resp.status_code == 404
