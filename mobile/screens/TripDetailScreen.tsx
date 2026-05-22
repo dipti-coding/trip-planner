@@ -2,8 +2,11 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {RouteProp} from '@react-navigation/native';
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {
+  Alert,
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -16,6 +19,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import {launchImageLibrary} from 'react-native-image-picker';
 import client from '../api/client';
 import PlanCard from '../components/PlanCard';
 import type {Plan, Trip} from '../types';
@@ -75,22 +79,54 @@ export default function TripDetailScreen({navigation, route}: Props) {
   const stripRef = useRef<ScrollView>(null);
 
   const [addingPlan, setAddingPlan] = useState(false);
+  const [inputMode, setInputMode] = useState<'paste' | 'screenshot'>('paste');
   const [rawText, setRawText] = useState('');
+  const [imageUri, setImageUri] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
 
   const closeModal = () => {
     setAddingPlan(false);
+    setInputMode('paste');
     setRawText('');
+    setImageUri(null);
     setParseError(null);
   };
 
+  const pickScreenshot = () => {
+    launchImageLibrary({mediaType: 'photo', quality: 1}, response => {
+      if (response.errorCode === 'permission') {
+        Alert.alert(
+          'Photo Access Required',
+          'Go to Settings > TripPlanner > Photos and select "All Photos" to pick screenshots.',
+          [
+            {text: 'Cancel', style: 'cancel'},
+            {text: 'Open Settings', onPress: () => Linking.openSettings()},
+          ],
+        );
+        return;
+      }
+      if (response.assets?.[0]?.uri) {
+        setImageUri(response.assets[0].uri);
+      }
+    });
+  };
+
   const handleParseAndCreate = async () => {
-    if (!rawText.trim()) return;
+    if (inputMode === 'paste' && !rawText.trim()) return;
+    if (inputMode === 'screenshot' && !imageUri) return;
     setSubmitting(true);
     setParseError(null);
     try {
-      await client.post(`/trips/${tripId}/plans/parse-and-create`, {raw_text: rawText});
+      if (inputMode === 'paste') {
+        await client.post(`/trips/${tripId}/plans/parse-and-create`, {raw_text: rawText});
+      } else {
+        const form = new FormData();
+        form.append('image', {uri: imageUri, name: 'screenshot.jpg', type: 'image/jpeg'} as any);
+        await client.post(`/trips/${tripId}/plans/parse-screenshot`, form, {
+          headers: {'Content-Type': 'multipart/form-data'},
+        });
+      }
       const plansRes = await client.get<Plan[]>(`/trips/${tripId}/plans`);
       setPlans(plansRes.data);
       closeModal();
@@ -99,7 +135,7 @@ export default function TripDetailScreen({navigation, route}: Props) {
       setParseError(
         typeof detail === 'string'
           ? detail
-          : 'Could not detect plan type. Try pasting more of the confirmation email.',
+          : 'Could not detect plan type. Try pasting more of the confirmation details.',
       );
     } finally {
       setSubmitting(false);
@@ -225,25 +261,47 @@ export default function TripDetailScreen({navigation, route}: Props) {
             <TouchableOpacity style={{flex: 1}} onPress={closeModal} activeOpacity={1} />
             <View style={styles.modalSheet}>
             <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Paste confirmation</Text>
-            <Text style={styles.modalSubtitle}>
-              Paste text from a booking confirmation email to auto-create a plan.
-            </Text>
-            <TextInput
-              style={styles.textInput}
-              multiline
-              placeholder="Your booking confirmation text..."
-              placeholderTextColor="#a8a8a8"
-              value={rawText}
-              onChangeText={setRawText}
-              autoFocus
-              textAlignVertical="top"
-            />
+            <Text style={styles.modalTitle}>Add Plan</Text>
+            <View style={styles.tabRow}>
+              <TouchableOpacity
+                style={[styles.tab, inputMode === 'paste' && styles.tabActive]}
+                onPress={() => { setInputMode('paste'); setImageUri(null); }}>
+                <Text style={[styles.tabText, inputMode === 'paste' && styles.tabTextActive]}>Paste</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tab, inputMode === 'screenshot' && styles.tabActive]}
+                onPress={() => { setInputMode('screenshot'); setRawText(''); }}>
+                <Text style={[styles.tabText, inputMode === 'screenshot' && styles.tabTextActive]}>Screenshot</Text>
+              </TouchableOpacity>
+            </View>
+            {inputMode === 'paste' ? (
+              <TextInput
+                style={styles.textInput}
+                multiline
+                placeholder="Your booking confirmation text..."
+                placeholderTextColor="#a8a8a8"
+                value={rawText}
+                onChangeText={setRawText}
+                autoFocus
+                textAlignVertical="top"
+              />
+            ) : (
+              <View style={styles.screenshotArea}>
+                {imageUri && (
+                  <Image source={{uri: imageUri}} style={styles.screenshotThumb} resizeMode="cover" />
+                )}
+                <TouchableOpacity style={styles.chooseBtn} onPress={pickScreenshot}>
+                  <Text style={styles.chooseBtnText}>
+                    {imageUri ? 'Change Screenshot' : 'Choose Screenshot'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
             {parseError ? <Text style={styles.parseError}>{parseError}</Text> : null}
             <TouchableOpacity
-              style={[styles.parseBtn, (!rawText.trim() || submitting) && styles.parseBtnDisabled]}
+              style={[styles.parseBtn, (submitting || (inputMode === 'paste' ? !rawText.trim() : !imageUri)) && styles.parseBtnDisabled]}
               onPress={handleParseAndCreate}
-              disabled={!rawText.trim() || submitting}
+              disabled={submitting || (inputMode === 'paste' ? !rawText.trim() : !imageUri)}
               activeOpacity={0.8}>
               {submitting ? (
                 <ActivityIndicator color="#fff" />
@@ -363,8 +421,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#e0e0e0',
     alignSelf: 'center', marginBottom: 20,
   },
-  modalTitle: {fontSize: 18, fontWeight: '600', color: '#161616', marginBottom: 4},
-  modalSubtitle: {fontSize: 13, color: '#525252', marginBottom: 16},
+  modalTitle: {fontSize: 18, fontWeight: '600', color: '#161616', marginBottom: 16},
+  tabRow: {
+    flexDirection: 'row', backgroundColor: '#f4f4f4',
+    borderRadius: 10, padding: 3, marginBottom: 16,
+  },
+  tab: {flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8},
+  tabActive: {backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, elevation: 2},
+  tabText: {fontSize: 14, fontWeight: '500', color: '#8d8d8d'},
+  tabTextActive: {color: '#161616', fontWeight: '600'},
+  screenshotArea: {
+    height: 160, borderWidth: 1, borderColor: '#e0e0e0', borderRadius: 12,
+    backgroundColor: '#f4f4f4', alignItems: 'center', justifyContent: 'center',
+    marginBottom: 12, gap: 12,
+  },
+  screenshotThumb: {width: 80, height: 80, borderRadius: 8},
+  chooseBtn: {
+    borderWidth: 1, borderColor: '#0f62fe', borderRadius: 8,
+    paddingVertical: 8, paddingHorizontal: 16,
+  },
+  chooseBtnText: {fontSize: 14, color: '#0f62fe', fontWeight: '500'},
   textInput: {
     borderWidth: 1, borderColor: '#e0e0e0', borderRadius: 12,
     padding: 12, height: 160, fontSize: 14, color: '#161616',
