@@ -325,6 +325,52 @@ All 13 types are accepted for `type`. Each has its own optional `details` fields
 
 ---
 
+## iOS Simulator
+
+### Start the app
+
+From the `mobile/` directory:
+
+```bash
+cd mobile
+npx react-native run-ios
+```
+
+This builds the native app, boots the default simulator (iPhone 16 Pro), installs the app, and starts Metro. On subsequent runs the build is incremental and faster.
+
+Metro must be running for JS changes to load. If it isn't, start it separately:
+
+```bash
+cd mobile
+npx react-native start
+```
+
+### Reloading after code changes
+
+| Situation | How to reload |
+|---|---|
+| JS-only change (screens, components, styles) | Fast Refresh runs automatically — no action needed |
+| Fast Refresh didn't pick up a change | Press **`Cmd+R`** in the simulator window |
+| Metro lost the connection / app is stale | Re-launch: `xcrun simctl launch booted org.reactjs.native.example.TripPlanner` |
+| Native code changed (new package, iOS config) | Full rebuild: `npx react-native run-ios` from `mobile/` |
+
+### Open the developer menu
+
+Press **`Cmd+D`** in the simulator (or `Cmd+Ctrl+Z` if `Cmd+D` is captured).
+From here you can toggle Fast Refresh, open the React DevTools, or reload manually.
+
+### Run on a specific simulator
+
+```bash
+# List available simulators
+xcrun simctl list devices available
+
+# Target a specific one
+npx react-native run-ios --simulator "iPhone 15"
+```
+
+---
+
 ## Run Tests
 
 ```bash
