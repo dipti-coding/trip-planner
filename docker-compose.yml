@@ -15,5 +15,20 @@ services:
       timeout: 5s
       retries: 5
 
+  api:
+    build: .
+    ports:
+      - "${API_PORT:-8000}:8000"
+    env_file: .env
+    environment:
+      # Override DATABASE_URL so the API reaches the postgres container, not localhost
+      DATABASE_URL: postgresql://${POSTGRES_USER:-trip_planner}:${POSTGRES_PASSWORD:-secret}@postgres:5432/${POSTGRES_DB:-trip_planner_dev}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
 volumes:
   postgres_data:
