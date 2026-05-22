@@ -10,51 +10,18 @@ from PIL import Image, ImageDraw
 
 
 def test_create_flight_plan(client, user):
-    trip = client.post("/trips", json={
-        "user_id": str(user.id),
-        "name": "Tokyo Trip",
-        "destination_city": "Tokyo, Japan",
-        "start_date": "2026-06-01",
-        "end_date": "2026-06-10",
-    }).json()
-
-    resp = client.post(f"/trips/{trip['id']}/plans", json={
-        "type": "Flight",
-        "title": "SFO → NRT",
-        "start_datetime": "2026-06-01T10:00:00Z",
-        "end_datetime": "2026-06-02T14:00:00Z",
-        "details": {
-            "airline": "United",
-            "flight_number": "UA 837",
-            "departure_airport": "SFO",
-            "arrival_airport": "NRT",
-        },
-    })
-    assert resp.status_code == 201
-    data = resp.json()
+    trip = _make_trip(client, user)
+    data = _make_flight_plan(client, trip["id"])
     assert data["type"] == "Flight"
     assert data["details"]["airline"] == "United"
     assert data["details"]["flight_number"] == "UA 837"
 
 
 def test_create_hotel_plan(client, user):
-    trip = client.post("/trips", json={
-        "user_id": str(user.id),
-        "name": "Tokyo Trip",
-        "destination_city": "Tokyo, Japan",
-        "start_date": "2026-06-01",
-        "end_date": "2026-06-10",
-    }).json()
-
-    resp = client.post(f"/trips/{trip['id']}/plans", json={
-        "type": "Hotel",
-        "title": "Shinjuku Granbell Hotel",
-        "start_datetime": "2026-06-02T15:00:00Z",
-        "end_datetime": "2026-06-10T11:00:00Z",
-        "details": {"room_type": "Deluxe Twin", "confirmation": "HTL123"},
-    })
-    assert resp.status_code == 201
-    assert resp.json()["details"]["room_type"] == "Deluxe Twin"
+    trip = _make_trip(client, user)
+    data = _make_hotel_plan(client, trip["id"])
+    assert data["type"] == "Hotel"
+    assert data["details"]["room_type"] == "Double"
 
 
 def test_create_plan_no_details(client, user):
@@ -126,18 +93,6 @@ def test_delete_plan(client, user):
 def test_delete_plan_not_found(client):
     resp = client.delete(f"/plans/{uuid.uuid4()}")
     assert resp.status_code == 404
-
-
-# ── parse-and-create tests ────────────────────────────────────────────────────
-
-def _make_trip(client, user):
-    return client.post("/trips", json={
-        "user_id": str(user.id),
-        "name": "Test Trip",
-        "destination_city": "Anywhere",
-        "start_date": "2026-06-01",
-        "end_date": "2026-06-30",
-    }).json()
 
 
 def test_parse_flight(client, user):
@@ -304,16 +259,6 @@ def test_parse_trip_not_found(client):
     assert resp.status_code == 404
 
 
-# ── parse-screenshot tests ─────────────────────────────────────────────────────
-
-def _make_png(text: str) -> bytes:
-    img = Image.new("RGB", (400, 100), color="white")
-    ImageDraw.Draw(img).text((10, 10), text, fill="black")
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    return buf.getvalue()
-
-
 _FLIGHT_TEXT = (
     "Your flight DL 405 departs from SFO on June 1, 2026 and arrives at JFK. "
     "Airline: Delta. Seat: 12A. Confirmation: ABCDEF."
@@ -352,3 +297,64 @@ def test_parse_screenshot_trip_not_found(client):
         files={"image": ("screenshot.png", png, "image/png")},
     )
     assert resp.status_code == 404
+
+
+def test_get_plan(client, user):
+    trip = _make_trip(client, user)
+    plan = _make_hotel_plan(client, trip["id"])
+
+    resp = client.get(f"/plans/{plan['id']}")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["id"] == plan["id"]
+    assert data["type"] == "Hotel"
+    assert data["title"] == "Shinjuku Granbell"
+    assert data["details"]["room_type"] == "Double"
+
+
+def test_get_plan_not_found(client):
+    resp = client.get(f"/plans/{uuid.uuid4()}")
+    assert resp.status_code == 404
+
+
+# ---------- Private common helper functions
+def _make_trip(client, user):
+    return client.post("/trips", json={
+        "user_id": str(user.id),
+        "name": "Test Trip",
+        "destination_city": "Anywhere",
+        "start_date": "2026-06-01",
+        "end_date": "2026-06-30",
+    }).json()
+
+
+def _make_hotel_plan(client, trip_id):
+    return client.post(f"/trips/{trip_id}/plans", json={
+        "type": "Hotel",
+        "title": "Shinjuku Granbell",
+        "start_datetime": "2026-06-01T15:00:00Z",
+        "end_datetime": "2026-06-10T11:00:00Z",
+        "details": {"room_type": "Double"},
+    }).json()
+
+
+def _make_flight_plan(client, trip_id):
+    return client.post(f"/trips/{trip_id}/plans", json={
+        "type": "Flight",
+        "title": "SFO → NRT",
+        "start_datetime": "2026-06-01T10:00:00Z",
+        "end_datetime": "2026-06-02T14:00:00Z",
+        "details": {
+            "airline": "United",
+            "flight_number": "UA 837",
+            "departure_airport": "SFO",
+            "arrival_airport": "NRT",
+        },
+    }).json()
+
+def _make_png(text: str) -> bytes:
+    img = Image.new("RGB", (400, 100), color="white")
+    ImageDraw.Draw(img).text((10, 10), text, fill="black")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
