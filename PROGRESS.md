@@ -62,11 +62,48 @@ cd mobile && npm run ios                 # build and open Simulator
 ---
 
 ## Week 2 — Auth + Core Endpoints + Booking Text Parsing
-_Not started_
 
 ### Carry-over from Week 1
 - [ ] OpenAPI schema verified at `/docs`
 - [ ] Hermit — toolchain pinning (Python, Terraform, Node)
+
+### Backend — Plan CRUD + Text Parsing (2026-05-20)
+Branch: `feature/ios-plan-text-parsing`
+- [x] `POST /trips` — create a trip
+- [x] `POST /trips/{trip_id}/plans` — manual plan creation for all 13 plan types with per-type `details` validation
+- [x] `DELETE /plans/{plan_id}` — delete a plan
+- [x] In-house regex text parsing (`app/services/parsing.py`) — keyword scoring for type detection, date extraction, field extractors for all 13 plan types
+- [x] `POST /trips/{trip_id}/plans/parse-and-create` — accepts pasted confirmation text, parses and creates plan; validates dates against trip date range
+- [x] `tests/test_plans.py` — 20 tests covering all 13 plan types + error cases
+- [x] Trip date range validation — rejects plans with dates outside trip start/end
+
+### Mobile — Add Plan Modal + Text Paste (2026-05-20)
+Branch: `feature/ios-plan-text-parsing`
+- [x] Add Plan FAB on Trip Detail screen
+- [x] Bottom-sheet modal with multiline text input for pasting confirmation text
+- [x] Calls `parse-and-create`, refreshes plan list on success, surfaces parse errors inline
+
+### Backend — Screenshot OCR Endpoint (2026-05-20)
+Branch: `feature/screenshot-ocr-backend` — PR #8
+- [x] `app/services/ocr.py` — `extract_text_from_image` via pytesseract + Pillow
+- [x] `POST /trips/{trip_id}/plans/parse-screenshot` — accepts image upload, runs OCR, feeds into existing parsing pipeline
+- [x] Refactored shared parse → validate → create logic into `_create_plan_from_text` helper (reused by both parse endpoints)
+- [x] `TesseractNotFoundError` returns 500 with install instructions (not swallowed as a user-facing 422)
+- [x] `pytesseract`, `Pillow`, `python-multipart` added to `requirements.txt`
+- [x] 3 new tests: screenshot happy path (mocked OCR), invalid image, trip not found
+- [x] `brew install tesseract` added to DEV_README First-Time Setup
+
+### Mobile — Screenshot Tab (2026-05-20)
+Branch: `feature/screenshot-ocr-mobile` — PR #10
+- [x] Paste / Screenshot tab toggle in the AddPlan modal
+- [x] Screenshot mode: photo library picker (`react-native-image-picker`), thumbnail preview, multipart POST to `parse-screenshot`
+- [x] `NSPhotoLibraryUsageDescription` added to `Info.plist` — triggers iOS photo access prompt
+- [x] `scripts/test_ocr.py` + `just test-ocr <image>` — local OCR + parsing test tool
+
+### Known limitations / open issues
+- Multi-leg itineraries (round trip, multi-city) only parse the first flight — issue #9
+- OCR drops text rendered on colored backgrounds or in stylized fonts (e.g. date headers in booking confirmations)
+- "Open Settings" alert for photo permission does not deep-link correctly — issue #11
 
 ## Week 3 — Weather + PDF Export
 _Not started_
