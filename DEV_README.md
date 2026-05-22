@@ -10,7 +10,7 @@ Install the following tools before starting:
 
 | Tool | Install |
 |---|---|
-| [Docker Desktop](https://www.docker.com/products/docker-desktop/) | Required to run local Postgres |
+| [Docker Desktop](https://www.docker.com/products/docker-desktop/) | Required to run local Postgres and the API |
 | [Just](https://just.systems/man/en/packages.html) | Task runner (`brew install just`) |
 | [Hermit](https://cashapp.github.io/hermit/usage/get-started/) | Hermetic toolchain manager |
 | Python 3.12+ | Managed via Hermit (see below) |
@@ -71,13 +71,13 @@ npm install
 
 ## Start the Local Stack
 
-**Start Postgres in Docker:**
+**Start Postgres and the API in Docker:**
 
 ```bash
 just up
 ```
 
-This runs `docker compose up -d` and waits until Postgres passes its health check before returning.
+This builds the API image if needed, starts both containers, and waits until Postgres and the API pass their health checks before returning.
 
 **Run database migrations:**
 
@@ -85,13 +85,33 @@ This runs `docker compose up -d` and waits until Postgres passes its health chec
 just migrate
 ```
 
-**Start the FastAPI backend:**
+The API is now running at `http://localhost:${API_PORT}` (default 8000). Interactive docs are at `/docs`.
+
+> **Backend hot reload without Docker:** If you're actively iterating on Python code and want faster reloads without rebuilding the image, stop the API container (`docker compose stop api`) and run `just dev` instead. It binds to the same port.
+
+---
+
+## Run the iOS Simulator
+
+**Boot iPhone 16 Pro and launch the app:**
 
 ```bash
-just dev
+just ios
 ```
 
-The API is now running at `http://localhost:${API_PORT}` (default 8000). Interactive docs are at the same host on `/docs`.
+Syncs CocoaPods if needed, boots the simulator, and starts the app.
+
+**See all available simulators:**
+
+```bash
+just ios-list
+```
+
+**Boot a specific simulator by number:**
+
+```bash
+just ios 3   # boots whichever model is at position 3 in ios-list
+```
 
 ---
 
@@ -192,7 +212,7 @@ The seed script wipes and repopulates all data on each run — safe to re-run at
 docker exec -it trip-planner-postgres-1 psql -U trip_planner -d trip_planner_dev -c "SELECT type, title FROM plans;"
 ```
 
-**Verify via the API** (with `just dev` running):
+**Verify via the API** (with `just up` running):
 
 ```bash
 # List all trips — copy the id from the response
@@ -351,14 +371,17 @@ docker compose down -v
 
 | Command | What it does |
 |---|---|
-| `just up` | Start Docker services |
-| `just dev` | Start FastAPI with hot reload |
+| `just up` | Start Postgres + API in Docker |
+| `just dev` | Start FastAPI on host with hot reload (alternative to Docker) |
 | `just migrate` | Run pending DB migrations |
 | `just seed` | Wipe and repopulate DB with test data |
 | `just test` | Run test suite |
 | `just ping` | Verify the API is responding |
 | `just logs` | Tail Docker container logs |
 | `just down` | Stop Docker services |
+| `just ios` | Boot iPhone 16 Pro simulator and launch the app |
+| `just ios-list` | List available iPhone simulators with index numbers |
+| `just ios <n>` | Boot simulator at position `n` from `ios-list` |
 
 ---
 
@@ -397,7 +420,7 @@ Make sure `.env` exists and has been populated: `cp .env.example .env`.
 Another process (or another user on a shared machine) is holding the port. Set `POSTGRES_PORT=5433` (or any free port) in `.env` — `docker-compose.yml` picks it up automatically.
 
 **Port 8000 already in use**
-Set `API_PORT=8001` (or any free port) in `.env` — `just dev` and `just ping` pick it up automatically.
+Set `API_PORT=8001` (or any free port) in `.env` — `just up`, `just dev`, and `just ping` all pick it up automatically.
 
 **`docker compose` command not found**
 The Docker Compose CLI plugin is missing. Link it from Docker Desktop:

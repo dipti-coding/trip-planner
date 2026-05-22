@@ -137,7 +137,7 @@ export default function HomeScreen({navigation}: Props) {
     return (
       <SafeAreaView style={styles.centered}>
         <Text style={styles.errorText}>{error}</Text>
-        <Text style={styles.hintText}>Make sure the API is running: just dev</Text>
+        <Text style={styles.hintText}>Make sure the API is running: just up</Text>
       </SafeAreaView>
     );
   }
