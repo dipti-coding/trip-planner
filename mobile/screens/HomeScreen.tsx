@@ -193,6 +193,8 @@ export default function HomeScreen({navigation}: Props) {
         data={sections}
         keyExtractor={s => s.label}
         contentContainerStyle={styles.listContent}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
         renderItem={({item: section}) => (
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>{section.label}</Text>
