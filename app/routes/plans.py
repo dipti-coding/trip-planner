@@ -112,6 +112,14 @@ async def parse_screenshot_and_create_plan(
     return _create_plan_from_text(trip, raw_text, db)
 
 
+@router.get("/plans/{plan_id}", response_model=PlanResponse)
+def get_plan(plan_id: UUID, db: Session = Depends(get_db)):
+    plan = db.query(Plan).filter(Plan.id == plan_id).first()
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    return plan
+
+
 @router.delete("/plans/{plan_id}", status_code=204)
 def delete_plan(plan_id: UUID, db: Session = Depends(get_db)):
     plan = db.query(Plan).filter(Plan.id == plan_id).first()
