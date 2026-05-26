@@ -247,6 +247,7 @@ export default function TripDetailScreen({navigation, route}: Props) {
             ref={stripRef}
             horizontal
             showsHorizontalScrollIndicator={false}
+            decelerationRate="fast"
             contentContainerStyle={styles.dayStrip}
             style={styles.dayStripScroll}>
             {days.map((date, i) => (
@@ -265,6 +266,7 @@ export default function TripDetailScreen({navigation, route}: Props) {
         style={styles.scroll}
         onScroll={handleScroll}
         scrollEventThrottle={16}
+        scrollIndicatorInsets={{bottom: 80}}
         contentContainerStyle={styles.scrollContent}>
         <DayView date={activeDate} plans={dayPlans} onDeletePlan={handleDeletePlan} />
       </ScrollView>
