@@ -4,40 +4,31 @@ import argparse
 # ----------------------------
 # TEMPLATE FIELD POSITIONS
 # ----------------------------
-# Test Airbnb Image Generation Commands: 
+# Test Hotel Booking Image Generation Commands:
 # Date format 1
-# python generate_test_airbnb_booking.py \
-#   --template-image ~/dev/trip-planner/tests/booking_templates/culver-booking.png \
-#   --template-name culver \
-#   --checkin "Tue, Jan 14" \
-#   --checkout "Thu, Jan 16" \
+# python generate_test_hotel_booking.py \
+#   --template-image /Users/dipti/dev/trip-planner/tests/booking_templates/hotel-booking.png \
+#   --template-name hotel \
+#   --checkin "2026-06-17" \
+#   --checkout "2026-06-18" \
 #   --checkin-time "5:00 PM" \
 #   --checkout-time "9:00 AM" \
-#   --output ~/Downloads/test_airbnb1.png
-# # Date format 2
-# python generate_test_airbnb_booking.py \
-#   --template-image ~/dev/trip-planner/tests/booking_templates/culver-booking.png \
-#   --template-name culver \
-#   --checkin "2026-06-13" \
-#   --checkout "2026-06-15" \
-#   --checkin-time "5:00 PM" \
-#   --checkout-time "9:00 AM" \
-#   --output ~/Downloads/test_airbnb2.png
+#   --output /Users/dipti/Downloads/test_airbnb1.png
 
 
 # ----------------------------
 
 TEMPLATES = {
-    "culver": {
-        "checkin_date": (90, 185),
-        "checkin_time": (90, 235),
-        "checkout_date": (390, 185),
-        "checkout_time": (390, 235),
-
-        # whiteout boxes
-        "checkin_box": (80, 170, 330, 270),
-        "checkout_box": (380, 170, 650, 270),
-    }
+    "hotel": {
+        "checkin_date": (175, 681),
+        "checkin_time": (175, 708),
+        "checkout_date": (458, 681),
+        "checkout_time": (458, 708),
+        "checkin_box": (163, 676, 422, 728),
+        "checkout_box": (445, 676, 746, 728),
+        "font_size_date": 17,
+        "font_size_time": 15,
+    },
 }
 
 # ----------------------------
@@ -74,12 +65,12 @@ draw = ImageDraw.Draw(image)
 
 font_bold = ImageFont.truetype(
     "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
-    32
+    coords.get("font_size_date", 32)
 )
 
 font_regular = ImageFont.truetype(
     "/System/Library/Fonts/Supplemental/Arial.ttf",
-    28
+    coords.get("font_size_time", 28)
 )
 
 # ----------------------------

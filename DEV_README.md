@@ -254,9 +254,9 @@ curl -s http://localhost:8000/trips | python3 -c "import sys,json; t=json.load(s
 curl -s -X POST http://localhost:8000/trips \
   -H "Content-Type: application/json" \
   -d '{
-    "user_id": "<user_id>",
-    "name": "Rome Fall 2026",
-    "destination_city": "Rome, Italy",
+    "user_id": "96a84b90-d7d7-4f6a-8691-d084deda8991",
+    "name": "Hawaii Fall 2026",
+    "destination_city": "Maui, Hawaii",
     "start_date": "2026-10-01",
     "end_date": "2026-10-08"
   }' | python3 -m json.tool
