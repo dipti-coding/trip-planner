@@ -105,6 +105,31 @@ Branch: `feature/screenshot-ocr-mobile` — PR #10
 - OCR drops text rendered on colored backgrounds or in stylized fonts (e.g. date headers in booking confirmations)
 - "Open Settings" alert for photo permission does not deep-link correctly — issue #11
 
+### Backend — Delete Endpoints (2026-05-26)
+Branch: `feature/delete-trip` — PR #14
+Branch: `feature/get-plan` — PR #15
+- [x] `DELETE /trips/{trip_id}` — deletes trip and cascades to all associated plans
+- [x] `GET /plans/{plan_id}` — fetch a single plan by ID
+
+### Mobile — Delete Plans + Delete Trips (2026-05-26)
+Branch: `feature/delete-plan-mobile` — PR #16
+Branch: `feature/delete-trip-mobile` — PR #17
+- [x] Delete plan button (dark "−" circle) on each `PlanCard` in Trip Detail screen — Alert confirmation before `DELETE /plans/{plan_id}`
+- [x] Delete trip button (dark grey "−" circle, right-aligned) on each `TripCard` in Home screen — Alert confirmation before `DELETE /trips/{trip_id}`, cascades removal from local state
+
+### Scripts — Hotel Booking Test Template (2026-05-26)
+Branch: `feature/delete-plan-mobile` — PR #16
+- [x] Renamed `generate_test_airbnb_booking.py` → `generate_test_hotel_booking.py`
+- [x] Replaced `culver-booking.png` with Hyatt Place `hotel-booking.png` in `tests/booking_templates/`
+- [x] Added `hotel` template to `TEMPLATES` with per-template font sizes and coordinate config
+
+### Mobile — HIG Scroll View Improvements (2026-05-26)
+Branch: `feature/scroll-views` — PR #18 (open)
+- [x] `HomeScreen` `FlatList`: `keyboardDismissMode="on-drag"` — keyboard dismisses when user scrolls the trip list
+- [x] `HomeScreen` `FlatList`: `keyboardShouldPersistTaps="handled"` — card taps work while search keyboard is open
+- [x] `TripDetailScreen` day strip: `decelerationRate="fast"` — snappier horizontal pill navigation
+- [x] `TripDetailScreen` main scroll: `scrollIndicatorInsets={{ bottom: 80 }}` — indicator track clears the Add Plan FAB
+
 ## Week 3 — Weather + PDF Export
 _Not started_
 
