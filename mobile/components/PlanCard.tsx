@@ -28,9 +28,10 @@ function planSubtitle(plan: Plan): string {
 type Props = {
   plan: Plan;
   onPress?: () => void;
+  onDelete?: () => void;
 };
 
-export default function PlanCard({plan, onPress}: Props) {
+export default function PlanCard({plan, onPress, onDelete}: Props) {
   const meta = TYPE_META[plan.type] ?? DEFAULT_META;
   const time = fmtTime(plan.start_datetime);
   const dur = fmtDuration(plan.start_datetime, plan.end_datetime);
@@ -52,6 +53,11 @@ export default function PlanCard({plan, onPress}: Props) {
             <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>
           ) : null}
         </View>
+        {onDelete && (
+          <TouchableOpacity style={styles.deleteBtn} onPress={onDelete} hitSlop={8}>
+            <Text style={styles.deleteBtnText}>−</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -76,4 +82,10 @@ const styles = StyleSheet.create({
   durText: {fontSize: 13, fontWeight: '400', color: '#525252'},
   title: {fontSize: 15, fontWeight: '600', color: '#161616', letterSpacing: -0.1},
   subtitle: {fontSize: 12, color: '#525252', marginTop: 1},
+  deleteBtn: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: '#fff1f1',
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  deleteBtnText: {fontSize: 18, color: '#da1e28', fontWeight: '400'},
 });
