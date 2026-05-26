@@ -2,6 +2,7 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import React, {useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   SafeAreaView,
   StyleSheet,
@@ -57,7 +58,7 @@ function StatusBadge({status}: {status: TripStatus}) {
   return null;
 }
 
-function TripCard({trip, onPress}: {trip: TripWithStatus; onPress: () => void}) {
+function TripCard({trip, onPress, onDelete}: {trip: TripWithStatus; onPress: () => void; onDelete: () => void}) {
   const days = dayCount(trip.start_date, trip.end_date);
   return (
     <TouchableOpacity style={styles.tripCard} onPress={onPress} activeOpacity={0.85}>
@@ -84,6 +85,9 @@ function TripCard({trip, onPress}: {trip: TripWithStatus; onPress: () => void}) 
       <View style={styles.cardBottom}>
         <Text style={styles.metaText}>📅 {days} days</Text>
         <Text style={styles.metaText}>📍 {trip.destination_city}</Text>
+        <TouchableOpacity style={styles.deleteBtn} onPress={onDelete} hitSlop={8}>
+          <Text style={styles.deleteBtnText}>−</Text>
+        </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );
@@ -101,6 +105,24 @@ export default function HomeScreen({navigation}: Props) {
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
+
+  const handleDeleteTrip = (tripId: string) => {
+    Alert.alert('Delete Trip', 'This will permanently delete the trip and all its plans.', [
+      {text: 'Cancel', style: 'cancel'},
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await client.delete(`/trips/${tripId}`);
+            setTrips(prev => prev.filter(t => t.id !== tripId));
+          } catch {
+            Alert.alert('Error', 'Could not delete trip. Please try again.');
+          }
+        },
+      },
+    ]);
+  };
 
   const sections = useMemo(() => {
     const q = query.toLowerCase();
@@ -181,6 +203,7 @@ export default function HomeScreen({navigation}: Props) {
                 onPress={() =>
                   navigation.navigate('TripDetail', {tripId: trip.id, tripName: trip.name})
                 }
+                onDelete={() => handleDeleteTrip(trip.id)}
               />
             ))}
           </View>
@@ -268,8 +291,15 @@ const styles = StyleSheet.create({
   badgeTextCurrent: {fontSize: 12, fontWeight: '500', color: '#198038'},
   badgeTextPast: {fontSize: 12, fontWeight: '500', color: '#525252'},
 
-  cardBottom: {flexDirection: 'row', gap: 12, padding: 12, paddingTop: 10},
+  cardBottom: {flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, paddingTop: 10},
   metaText: {fontSize: 13, color: '#525252'},
+  deleteBtn: {
+    marginLeft: 'auto',
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: '#393939',
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  deleteBtnText: {fontSize: 18, color: '#fff', fontWeight: '300', lineHeight: 22},
 
   building: {position: 'absolute', bottom: 0, backgroundColor: BUILDING_COLOR},
   towerLeft: {
