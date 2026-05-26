@@ -47,7 +47,7 @@ function DayPill({date, active, onPress}: {date: string; active: boolean; onPres
   );
 }
 
-function DayView({date, plans}: {date: string; plans: Plan[]}) {
+function DayView({date, plans, onDeletePlan}: {date: string; plans: Plan[]; onDeletePlan: (id: string) => void}) {
   return (
     <View style={styles.dayView}>
       <View style={styles.dayHeader}>
@@ -57,7 +57,7 @@ function DayView({date, plans}: {date: string; plans: Plan[]}) {
         </Text>
       </View>
       <View style={styles.planList}>
-        {plans.map(p => <PlanCard key={p.id} plan={p} />)}
+        {plans.map(p => <PlanCard key={p.id} plan={p} onDelete={() => onDeletePlan(p.id)} />)}
         {plans.length === 0 && (
           <View style={styles.emptyDay}>
             <Text style={styles.emptyDayText}>Nothing planned yet</Text>
@@ -110,6 +110,24 @@ export default function TripDetailScreen({navigation, route}: Props) {
         setImageUri(response.assets[0].uri);
       }
     });
+  };
+
+  const handleDeletePlan = (planId: string) => {
+    Alert.alert('Delete Plan', 'Remove this plan from the trip?', [
+      {text: 'Cancel', style: 'cancel'},
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await client.delete(`/plans/${planId}`);
+            setPlans(prev => prev.filter(p => p.id !== planId));
+          } catch {
+            Alert.alert('Error', 'Could not delete plan. Please try again.');
+          }
+        },
+      },
+    ]);
   };
 
   const handleParseAndCreate = async () => {
@@ -248,7 +266,7 @@ export default function TripDetailScreen({navigation, route}: Props) {
         onScroll={handleScroll}
         scrollEventThrottle={16}
         contentContainerStyle={styles.scrollContent}>
-        <DayView date={activeDate} plans={dayPlans} />
+        <DayView date={activeDate} plans={dayPlans} onDeletePlan={handleDeletePlan} />
       </ScrollView>
 
       <TouchableOpacity style={styles.fab} onPress={() => setAddingPlan(true)} activeOpacity={0.85}>
