@@ -1,4 +1,5 @@
 import axios from 'axios';
+import {LOCAL_API_URL} from '@env';
 
 const DEV_EMAIL = 'test@example.com';
 const DEV_PASSWORD = 'REDACTED';
@@ -13,7 +14,7 @@ export async function getToken(): Promise<string> {
   params.append('username', DEV_EMAIL);
   params.append('password', DEV_PASSWORD);
   const res = await axios.post(
-    'http://localhost:8000/auth/token',
+    `${LOCAL_API_URL}/auth/token`,
     params.toString(),
     {headers: {'Content-Type': 'application/x-www-form-urlencoded'}},
   );

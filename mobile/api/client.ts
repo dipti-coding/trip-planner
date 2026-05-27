@@ -1,7 +1,8 @@
 import axios from 'axios';
+import {LOCAL_API_URL} from '@env';
 import {clearToken, getToken} from './auth';
 
-const client = axios.create({baseURL: 'http://localhost:8000'});
+const client = axios.create({baseURL: LOCAL_API_URL});
 
 client.interceptors.request.use(async config => {
   const token = await getToken();
