@@ -130,6 +130,24 @@ Branch: `feature/scroll-views` — PR #18 (open)
 - [x] `TripDetailScreen` day strip: `decelerationRate="fast"` — snappier horizontal pill navigation
 - [x] `TripDetailScreen` main scroll: `scrollIndicatorInsets={{ bottom: 80 }}` — indicator track clears the Add Plan FAB
 
+### Backend + Mobile — JWT Authentication Phase 1 (2026-05-27)
+Branch: `feature/jwt-auth` — PR #21
+
+- [x] `POST /auth/token` — OAuth2 password form endpoint; verifies credentials against env vars, returns signed JWT
+- [x] `app/auth.py` — JWT creation/verification (`python-jose`), bcrypt password check (`bcrypt`), `get_current_user` FastAPI dependency
+- [x] All 8 trips and plans routes protected with `Depends(get_current_user)`
+- [x] `python-jose[cryptography]` and `bcrypt>=4.0.0` added to `requirements.txt` (replaced passlib — incompatible with bcrypt 4.x on Python 3.14)
+- [x] `.env.example` updated with `JWT_SECRET_KEY`, `JWT_EXPIRE_MINUTES`, `AUTH_USER_EMAIL`, `AUTH_USER_PASSWORD_HASH` and generation commands
+- [x] `load_dotenv()` added to `app/auth.py` to ensure env vars are loaded before module-level reads
+- [x] `just gen-docker-env` recipe — generates `.env.docker` from `.env`, stripping quotes and escaping `$` → `$$` so Docker Compose doesn't interpolate bcrypt hashes; `.env.docker` is gitignored
+- [x] `just up` runs `gen-docker-env` as a dependency before starting Docker Compose
+- [x] `docker-compose.yml` updated to use `env_file: .env.docker` instead of `.env`
+- [x] `mobile/api/auth.ts` — fetches and in-memory caches a JWT using hardcoded dev credentials; `clearToken()` exposed for 401 recovery
+- [x] `mobile/api/client.ts` — request interceptor attaches `Authorization: Bearer`; response interceptor clears token on 401
+- [x] `tests/test_auth.py` — 6 tests: login success, wrong password, wrong email, no token, valid token, bad token
+- [x] `tests/conftest.py` — `client` fixture overrides `get_current_user` so all existing route tests pass without auth headers
+- [x] Verified in iOS Simulator: trip list loads without 401 errors
+
 ## Week 3 — Weather + PDF Export
 _Not started_
 
