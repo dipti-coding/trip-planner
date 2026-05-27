@@ -19,7 +19,7 @@ services:
     build: .
     ports:
       - "${API_PORT:-8000}:8000"
-    env_file: .env
+    env_file: .env.docker
     environment:
       # Override DATABASE_URL so the API reaches the postgres container, not localhost
       DATABASE_URL: postgresql://${POSTGRES_USER:-trip_planner}:${POSTGRES_PASSWORD:-secret}@postgres:5432/${POSTGRES_DB:-trip_planner_dev}

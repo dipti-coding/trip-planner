@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from app.auth import get_current_user
 from app.db import get_db
 from app.main import app
 from app.models.user import User
@@ -28,6 +29,7 @@ def db():
 @pytest.fixture
 def client(db):
     app.dependency_overrides[get_db] = lambda: db
+    app.dependency_overrides[get_current_user] = lambda: "test@example.com"
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()

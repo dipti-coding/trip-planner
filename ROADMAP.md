@@ -146,17 +146,41 @@ A complete trip view with weather, and the ability to generate a PDF version of 
 
 **Goal:** Auth wired up, MVP is stable, deployed, and ready for TestFlight.
 
-### Backend
-- [ ] Auth routes: `POST /auth/register`, `POST /auth/login` (AWS Auth)
+### Authentication — Phase 1 (done, ahead of schedule)
+
+JWT auth with a single hardcoded user — lets the full app be tested locally without a login screen.
+
+- [x] `POST /auth/token` — issues a signed JWT against `AUTH_USER_EMAIL` + `AUTH_USER_PASSWORD_HASH` in `.env`
+- [x] All trips and plans routes protected with `get_current_user` FastAPI dependency
+- [x] Mobile axios client silently fetches and caches token on first request (no login screen needed yet)
+- [x] `app/auth.py` — JWT creation, verification, and `get_current_user` dependency
+- [x] `just up` generates `.env.docker` (escapes `$` → `$$`) before Docker Compose so bcrypt hashes aren't interpolated
+- [x] Auth tests: login success, wrong password, wrong email, no token, valid token, bad token
+
+### Authentication — Phase 2 (Week 4)
+
+Multi-user auth with a real login screen. Migration from Phase 1 is additive — no route or mobile client changes needed.
+
+**Backend:**
+- [ ] Add `hashed_password` column to `users` table (Alembic migration)
+- [ ] Update `authenticate_user()` in `app/auth.py` to look up credentials from DB instead of env vars
+- [ ] `POST /auth/register` — create user, hash password, return JWT
 - [ ] User profile routes: `GET /users/me`, `PUT /users/me` (home city, preferences)
-- [ ] Gate all trip and plan endpoints with auth
+- [ ] Migrate from self-managed JWT to AWS Cognito as token issuer (update `get_current_user` to verify against Cognito JWKS endpoint)
+
+**Mobile:**
+- [ ] Login screen — email + password form, calls `POST /auth/token`, stores JWT in SecureStore
+- [ ] Replace hardcoded credentials in `mobile/api/auth.ts` with stored token from SecureStore
+- [ ] Sign up screen — calls `POST /auth/register`
+- [ ] Log out — clears token from SecureStore
+- [ ] Connect all screens to production API (not localhost)
+
+### Backend
 - [ ] Deploy FastAPI (environment variables, Postgres connection, health check)
 - [ ] Add request logging and basic error monitoring (TBD: Sentry)
 - [ ] End-to-end API testing for all core flows
 
 ### Mobile
-- [ ] Auth flow: sign up, log in, log out, persist session token
-- [ ] Connect all screens to production API (not localhost)
 - [ ] Loading states, error states, and empty states on all screens
 - [ ] App icon, splash screen, basic branding
 - [ ] EAS Build setup and submit to TestFlight for internal testing

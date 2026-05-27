@@ -4,6 +4,73 @@ A running log of architectural decisions, options evaluated, and the rationale b
 
 ---
 
+## Authentication: JWT vs AWS Cognito vs Static API Key
+
+**Decision: JWT (self-managed) for MVP — migrate to Cognito when deploying to AWS**
+
+Three options were evaluated for protecting the FastAPI backend. The app currently has a single developer user; the solution must scale to multiple users without an auth layer rewrite.
+
+### Option 1: Static API Key
+
+A single secret token in an env var. Every request checks `Authorization: Bearer <token>`.
+
+**Pros**
+- ~30 minutes to implement, zero dependencies
+- No database involvement, no token expiry to manage
+
+**Cons**
+- Token never expires — rotation is manual and all clients break simultaneously
+- Doesn't model "users" at all — migrating to multi-user requires a full rewrite of the auth layer
+
+### Option 2: JWT (self-managed, FastAPI + passlib + python-jose)
+
+User submits email/password to `/auth/token`, receives a short-lived JWT. All protected routes verify the JWT via a `get_current_user` dependency.
+
+**Phase 1 (now):** Credentials are a single hardcoded user stored in env vars (`AUTH_USER_EMAIL`, `AUTH_USER_PASSWORD_HASH`). No DB changes needed.
+
+**Phase 2 (multi-user):** Add `hashed_password` to the `User` model, point `authenticate_user()` at the database. The JWT middleware, all protected routes, and the mobile client stay identical.
+
+**Pros**
+- Stateless — no session store needed
+- Scales to multiple users with a single DB column addition and one function change in `app/auth.py`
+- Not coupled to AWS — works in any environment
+- Easy to later swap the token *issuer* to Cognito while keeping the same `Authorization: Bearer` contract
+
+**Cons**
+- Password hashing, token signing, and refresh logic are your responsibility
+- Refresh tokens add complexity if needed (not implemented in Phase 1)
+- Password reset / MFA are your problem
+
+### Option 3: AWS Cognito
+
+Managed identity service — handles signup, login, JWT issuance, refresh, MFA, social login. FastAPI verifies JWT signatures against Cognito's public JWKS endpoint.
+
+**Pros**
+- Aligns with AWS deployment target — no auth infrastructure to run or maintain
+- Handles token refresh, password reset, MFA, social login out of the box
+- Scales to any number of users with zero backend changes
+- "One hardcoded user" is just one user in a Cognito User Pool — same code works for 1 or 10,000
+
+**Cons**
+- More AWS setup upfront (User Pool, App Client, JWKS verification middleware)
+- Local dev requires mocking Cognito or always hitting the real pool, which adds friction during development
+- Adds AWS lock-in to the auth layer — harder to run locally or switch cloud providers
+
+### Comparison
+
+| | Static API Key | JWT (self-managed) | AWS Cognito |
+|---|---|---|---|
+| Time to implement | 30 min | 2–3 hours | Half day |
+| Scales to multi-user | No — rewrite needed | Yes — one DB column | Yes — zero changes |
+| Local dev friction | None | None | Medium (mock or hit live pool) |
+| AWS coupling | None | None | High |
+| Managed security features | None | None | Full (MFA, reset, social) |
+| **Best for** | Throwaway prototype | **MVP + near-term scale** | AWS deployment |
+
+**Rationale:** JWT gives a clean working auth layer now, and the migration path to Cognito later is additive — Cognito becomes the token *issuer* but the `Authorization: Bearer` contract and all route dependencies remain unchanged. The single-to-multi-user migration (Phase 2) touches only `authenticate_user()` in `app/auth.py` and adds one column to the `users` table.
+
+---
+
 ## Authentication: Supabase Auth vs Custom PostgreSQL Auth
 
 **Decision: Supabase Auth (for MVP)**
