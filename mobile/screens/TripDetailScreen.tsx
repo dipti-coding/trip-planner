@@ -4,10 +4,8 @@ import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {
   Alert,
   ActivityIndicator,
-  Image,
   KeyboardAvoidingView,
   Linking,
-  Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Platform,
@@ -19,17 +17,45 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import {launchImageLibrary} from 'react-native-image-picker';
 import client from '../api/client';
 import PlanCard from '../components/PlanCard';
+import PlanDetailSheet from '../components/PlanDetailSheet';
 import type {Plan, Trip} from '../types';
 import {dateRange, fmtDow, fmtDayLabel, fmtDayNum, fmtShort} from '../utils/dates';
 import type {RootStackParamList} from '../App';
+import {colors, coverGradient, radii, spacing, typography} from '../theme';
+import {TYPE_META} from '../assets/planTypes';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'TripDetail'>;
   route: RouteProp<RootStackParamList, 'TripDetail'>;
 };
+
+type ViewMode = 'timeline' | 'plans' | 'itinerary';
+type AddStep = null | 'picker' | 'paste' | 'manual';
+
+const PLAN_TYPES = ['Flight', 'Stay', 'Eat', 'Do'] as const;
+const PLAN_TYPE_ICONS: Record<string, string> = {
+  Flight: '✈',
+  Stay: '🛏',
+  Eat: '🍴',
+  Do: '📍',
+};
+
+const SAMPLE_BOOKING = `Your booking confirmation – Air France
+Booking reference: AF-X42T9Q
+SFO → CDG, Sep 18 18:55–Sep 19 13:45
+Passenger: John Smith
+Seat: 24A`;
+
+const DETECT_TYPES = [
+  {icon: '✈', label: 'Flight', sub: 'Flight numbers, IATA codes, gate'},
+  {icon: '🛏', label: 'Stay', sub: 'Check-in / out, room type'},
+  {icon: '📍', label: 'Activity', sub: 'Reservation, tickets, time slot'},
+  {icon: '🍴', label: 'Food', sub: 'Restaurant, party size, OpenTable'},
+];
 
 function DayPill({date, active, onPress}: {date: string; active: boolean; onPress: () => void}) {
   return (
@@ -47,17 +73,35 @@ function DayPill({date, active, onPress}: {date: string; active: boolean; onPres
   );
 }
 
-function DayView({date, plans, onDeletePlan}: {date: string; plans: Plan[]; onDeletePlan: (id: string) => void}) {
+function DayView({date, plans, onDeletePlan, onSelectPlan}: {
+  date: string;
+  plans: Plan[];
+  onDeletePlan: (id: string) => void;
+  onSelectPlan: (plan: Plan) => void;
+}) {
+  const totalCost = plans.reduce((sum, p) => {
+    const c = (p.details as any)?.cost;
+    return sum + (typeof c === 'number' ? c : 0);
+  }, 0);
+
   return (
     <View style={styles.dayView}>
       <View style={styles.dayHeader}>
         <Text style={styles.dayHeaderDate}>{fmtDow(date)}</Text>
         <Text style={styles.dayHeaderCount}>
           {plans.length} plan{plans.length !== 1 ? 's' : ''}
+          {totalCost > 0 ? ` · $${totalCost}` : ''}
         </Text>
       </View>
       <View style={styles.planList}>
-        {plans.map(p => <PlanCard key={p.id} plan={p} onDelete={() => onDeletePlan(p.id)} />)}
+        {plans.map(p => (
+          <PlanCard
+            key={p.id}
+            plan={p}
+            onPress={() => onSelectPlan(p)}
+            onDelete={() => onDeletePlan(p.id)}
+          />
+        ))}
         {plans.length === 0 && (
           <View style={styles.emptyDay}>
             <Text style={styles.emptyDayText}>Nothing planned yet</Text>
@@ -68,6 +112,222 @@ function DayView({date, plans, onDeletePlan}: {date: string; plans: Plan[]; onDe
   );
 }
 
+// ─── Add Plan inline overlay ─────────────────────────────────────────────────
+
+function AddPlanOverlay({
+  tripId,
+  onClose,
+  onAdded,
+}: {
+  tripId: string;
+  onClose: () => void;
+  onAdded: (plans: Plan[]) => void;
+}) {
+  const [addStep, setAddStep] = useState<Exclude<AddStep, null>>('picker');
+  const [rawText, setRawText] = useState('');
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [parseError, setParseError] = useState<string | null>(null);
+  const [manualType, setManualType] = useState<string>('Activity');
+
+  async function handleDetect() {
+    if (addStep === 'paste' && !rawText.trim() && !imageUri) return;
+    setSubmitting(true);
+    setParseError(null);
+    try {
+      if (imageUri) {
+        const form = new FormData();
+        form.append('image', {uri: imageUri, name: 'screenshot.jpg', type: 'image/jpeg'} as any);
+        await client.post(`/trips/${tripId}/plans/parse-screenshot`, form, {
+          headers: {'Content-Type': 'multipart/form-data'},
+        });
+      } else {
+        await client.post(`/trips/${tripId}/plans/parse-and-create`, {raw_text: rawText});
+      }
+      const res = await client.get<Plan[]>(`/trips/${tripId}/plans`);
+      onAdded(res.data);
+      onClose();
+    } catch (e: any) {
+      const detail = e.response?.data?.detail;
+      setParseError(
+        typeof detail === 'string'
+          ? detail
+          : 'Could not detect plan type. Try pasting more of the confirmation details.',
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function pickScreenshot() {
+    launchImageLibrary({mediaType: 'photo', quality: 1}, response => {
+      if (response.errorCode === 'permission') {
+        Alert.alert(
+          'Photo Access Required',
+          'Go to Settings > TripPlanner > Photos and select "All Photos".',
+          [{text: 'Cancel', style: 'cancel'}, {text: 'Open Settings', onPress: () => Linking.openSettings()}],
+        );
+        return;
+      }
+      if (response.assets?.[0]?.uri) setImageUri(response.assets[0].uri);
+    });
+  }
+
+  return (
+    <View style={styles.addOverlay}>
+      {/* Nav bar */}
+      <View style={styles.addNavBar}>
+        {addStep === 'picker' ? (
+          <TouchableOpacity onPress={onClose} style={styles.addNavBtn}>
+            <Text style={styles.addNavBtnText}>Cancel</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity onPress={() => setAddStep('picker')} style={styles.addNavBtn}>
+            <Text style={styles.addNavBtnText}>‹ Back</Text>
+          </TouchableOpacity>
+        )}
+        <Text style={styles.addNavTitle}>
+          {addStep === 'picker' ? 'New plan' : addStep === 'paste' ? 'Paste booking' : 'Enter manually'}
+        </Text>
+        <View style={styles.addNavBtn} />
+      </View>
+
+      <ScrollView keyboardShouldPersistTaps="handled">
+        {addStep === 'picker' && (
+          <View style={styles.addPickerContent}>
+            <Text style={styles.addPickerSub}>How would you like to add this plan?</Text>
+
+            <TouchableOpacity style={styles.choiceCard} onPress={() => setAddStep('paste')} activeOpacity={0.8}>
+              <View style={[styles.choiceIcon, {backgroundColor: colors.accent}]}>
+                <Text style={styles.choiceIconText}>📄</Text>
+              </View>
+              <View style={styles.choiceText}>
+                <Text style={styles.choiceTitle}>Paste a booking</Text>
+                <Text style={styles.choiceSub}>Forward email text or drop a screenshot. We extract dates, times, confirmation numbers and more.</Text>
+                <View style={styles.choiceTags}>
+                  <View style={styles.choiceTag}><Text style={styles.choiceTagText}>Text</Text></View>
+                  <View style={styles.choiceTag}><Text style={styles.choiceTagText}>Screenshot</Text></View>
+                </View>
+              </View>
+              <Text style={styles.choiceArrow}>›</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.choiceCard} onPress={() => setAddStep('manual')} activeOpacity={0.8}>
+              <View style={[styles.choiceIcon, {backgroundColor: colors.textSecondary}]}>
+                <Text style={styles.choiceIconText}>✏</Text>
+              </View>
+              <View style={styles.choiceText}>
+                <Text style={styles.choiceTitle}>Enter manually</Text>
+                <Text style={styles.choiceSub}>Type in the details — works for anything.</Text>
+              </View>
+              <Text style={styles.choiceArrow}>›</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.typePickerLabel}>PICK A TYPE</Text>
+            <View style={styles.typeRow}>
+              {PLAN_TYPES.map(t => (
+                <TouchableOpacity
+                  key={t}
+                  style={styles.typeBtn}
+                  onPress={() => { setManualType(t); setAddStep('manual'); }}
+                  activeOpacity={0.7}>
+                  <Text style={styles.typeBtnIcon}>{PLAN_TYPE_ICONS[t]}</Text>
+                  <Text style={styles.typeBtnLabel}>{t}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {addStep === 'paste' && (
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <View style={styles.addPickerContent}>
+              <Text style={styles.addPickerSub}>
+                Paste a confirmation email, or drop a screenshot. We'll detect the type and fill in the rest.
+              </Text>
+              <Text style={styles.fieldLabel}>Paste booking text</Text>
+              <TextInput
+                style={styles.pasteInput}
+                multiline
+                placeholder={'Paste here – "Your booking confirmation – Air\nFrance\nBooking reference: AF-X42T9Q\nSFO → CDG, Sep 18 18:55…"'}
+                placeholderTextColor={colors.textTertiary}
+                value={rawText}
+                onChangeText={setRawText}
+                autoFocus
+                textAlignVertical="top"
+              />
+              <View style={styles.pasteLinks}>
+                <TouchableOpacity onPress={() => setRawText(SAMPLE_BOOKING)}>
+                  <Text style={styles.pasteLinkText}>□ Use sample</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={pickScreenshot}>
+                  <Text style={styles.pasteLinkText}>↗ Screenshot{imageUri ? ' ✓' : ''}</Text>
+                </TouchableOpacity>
+              </View>
+              {parseError && <Text style={styles.parseError}>{parseError}</Text>}
+              <TouchableOpacity
+                style={[styles.detectBtn, (!rawText.trim() && !imageUri || submitting) && styles.detectBtnDisabled]}
+                onPress={handleDetect}
+                disabled={submitting || (!rawText.trim() && !imageUri)}
+                activeOpacity={0.8}>
+                {submitting
+                  ? <ActivityIndicator color={colors.surface} />
+                  : <Text style={styles.detectBtnText}>Detect & extract</Text>}
+              </TouchableOpacity>
+              <Text style={styles.detectSectionLabel}>WHAT WE DETECT</Text>
+              {DETECT_TYPES.map(dt => (
+                <View key={dt.label} style={styles.detectRow}>
+                  <Text style={styles.detectIcon}>{dt.icon}</Text>
+                  <View>
+                    <Text style={styles.detectLabel}>{dt.label}</Text>
+                    <Text style={styles.detectSub}>{dt.sub}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </KeyboardAvoidingView>
+        )}
+
+        {addStep === 'manual' && (
+          <View style={styles.addPickerContent}>
+            <Text style={styles.addPickerSub}>Select a type, then fill in the details.</Text>
+            <Text style={styles.fieldLabel}>TYPE</Text>
+            <View style={styles.typeRow}>
+              {PLAN_TYPES.map(t => (
+                <TouchableOpacity
+                  key={t}
+                  style={[styles.typeBtn, manualType === t && styles.typeBtnActive]}
+                  onPress={() => setManualType(t)}
+                  activeOpacity={0.7}>
+                  <Text style={styles.typeBtnIcon}>{PLAN_TYPE_ICONS[t]}</Text>
+                  <Text style={[styles.typeBtnLabel, manualType === t && styles.typeBtnLabelActive]}>{t}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.fieldLabel}>TITLE</Text>
+            <TextInput
+              style={styles.manualInput}
+              placeholder="Plan name"
+              placeholderTextColor={colors.textTertiary}
+            />
+            <Text style={styles.fieldLabel}>DATE & TIME</Text>
+            <TextInput
+              style={styles.manualInput}
+              placeholder="e.g. Sep 18, 6:30 PM"
+              placeholderTextColor={colors.textTertiary}
+            />
+            <TouchableOpacity style={[styles.detectBtn, styles.detectBtnDisabled]}>
+              <Text style={styles.detectBtnText}>Save plan</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
+// ─── Main Screen ─────────────────────────────────────────────────────────────
+
 export default function TripDetailScreen({navigation, route}: Props) {
   const {tripId} = route.params;
   const [trip, setTrip] = useState<Trip | null>(null);
@@ -76,41 +336,10 @@ export default function TripDetailScreen({navigation, route}: Props) {
   const [error, setError] = useState<string | null>(null);
   const [dayIdx, setDayIdx] = useState(0);
   const [scrolled, setScrolled] = useState(false);
-  const stripRef = useRef<ScrollView>(null);
-
+  const [viewMode, setViewMode] = useState<ViewMode>('plans');
   const [addingPlan, setAddingPlan] = useState(false);
-  const [inputMode, setInputMode] = useState<'paste' | 'screenshot'>('paste');
-  const [rawText, setRawText] = useState('');
-  const [imageUri, setImageUri] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [parseError, setParseError] = useState<string | null>(null);
-
-  const closeModal = () => {
-    setAddingPlan(false);
-    setInputMode('paste');
-    setRawText('');
-    setImageUri(null);
-    setParseError(null);
-  };
-
-  const pickScreenshot = () => {
-    launchImageLibrary({mediaType: 'photo', quality: 1}, response => {
-      if (response.errorCode === 'permission') {
-        Alert.alert(
-          'Photo Access Required',
-          'Go to Settings > TripPlanner > Photos and select "All Photos" to pick screenshots.',
-          [
-            {text: 'Cancel', style: 'cancel'},
-            {text: 'Open Settings', onPress: () => Linking.openSettings()},
-          ],
-        );
-        return;
-      }
-      if (response.assets?.[0]?.uri) {
-        setImageUri(response.assets[0].uri);
-      }
-    });
-  };
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const stripRef = useRef<ScrollView>(null);
 
   const handleDeletePlan = (planId: string) => {
     Alert.alert('Delete Plan', 'Remove this plan from the trip?', [
@@ -128,36 +357,6 @@ export default function TripDetailScreen({navigation, route}: Props) {
         },
       },
     ]);
-  };
-
-  const handleParseAndCreate = async () => {
-    if (inputMode === 'paste' && !rawText.trim()) return;
-    if (inputMode === 'screenshot' && !imageUri) return;
-    setSubmitting(true);
-    setParseError(null);
-    try {
-      if (inputMode === 'paste') {
-        await client.post(`/trips/${tripId}/plans/parse-and-create`, {raw_text: rawText});
-      } else {
-        const form = new FormData();
-        form.append('image', {uri: imageUri, name: 'screenshot.jpg', type: 'image/jpeg'} as any);
-        await client.post(`/trips/${tripId}/plans/parse-screenshot`, form, {
-          headers: {'Content-Type': 'multipart/form-data'},
-        });
-      }
-      const plansRes = await client.get<Plan[]>(`/trips/${tripId}/plans`);
-      setPlans(plansRes.data);
-      closeModal();
-    } catch (e: any) {
-      const detail = e.response?.data?.detail;
-      setParseError(
-        typeof detail === 'string'
-          ? detail
-          : 'Could not detect plan type. Try pasting more of the confirmation details.',
-      );
-    } finally {
-      setSubmitting(false);
-    }
   };
 
   useEffect(() => {
@@ -199,7 +398,7 @@ export default function TripDetailScreen({navigation, route}: Props) {
   if (loading) {
     return (
       <SafeAreaView style={styles.centered}>
-        <ActivityIndicator size="large" color="#0f62fe" />
+        <ActivityIndicator size="large" color={colors.accent} />
       </SafeAreaView>
     );
   }
@@ -215,9 +414,12 @@ export default function TripDetailScreen({navigation, route}: Props) {
     );
   }
 
+  const gradient = coverGradient(trip.destination_city);
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      {/* Header with cover gradient */}
+      <LinearGradient colors={gradient} style={styles.header}>
         <SafeAreaView>
           <View style={styles.navRow}>
             <TouchableOpacity style={styles.glassBtn} onPress={() => navigation.goBack()}>
@@ -228,9 +430,9 @@ export default function TripDetailScreen({navigation, route}: Props) {
                 {trip.name}
               </Text>
             )}
-            <View style={styles.glassBtnWide}>
+            <TouchableOpacity style={styles.glassBtnWide}>
               <Text style={styles.glassBtnWideText}>📄 PDF</Text>
-            </View>
+            </TouchableOpacity>
           </View>
 
           {!scrolled && (
@@ -243,6 +445,22 @@ export default function TripDetailScreen({navigation, route}: Props) {
             </View>
           )}
 
+          {/* Segmented tabs */}
+          <View style={styles.segRow}>
+            {(['timeline', 'plans', 'itinerary'] as ViewMode[]).map(mode => (
+              <TouchableOpacity
+                key={mode}
+                style={[styles.segBtn, viewMode === mode && styles.segBtnActive]}
+                onPress={() => setViewMode(mode)}
+                activeOpacity={0.8}>
+                <Text style={[styles.segBtnText, viewMode === mode && styles.segBtnTextActive]}>
+                  {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Day strip */}
           <ScrollView
             ref={stripRef}
             horizontal
@@ -260,222 +478,304 @@ export default function TripDetailScreen({navigation, route}: Props) {
             ))}
           </ScrollView>
         </SafeAreaView>
-      </View>
+      </LinearGradient>
 
-      <ScrollView
-        style={styles.scroll}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-        scrollIndicatorInsets={{bottom: 80}}
-        contentContainerStyle={styles.scrollContent}>
-        <DayView date={activeDate} plans={dayPlans} onDeletePlan={handleDeletePlan} />
-      </ScrollView>
-
-      <TouchableOpacity style={styles.fab} onPress={() => setAddingPlan(true)} activeOpacity={0.85}>
-        <Text style={styles.fabText}>Add Plan</Text>
-      </TouchableOpacity>
-
-      <Modal visible={addingPlan} animationType="slide" transparent onRequestClose={closeModal}>
-        <View style={styles.modalOverlay}>
-          <KeyboardAvoidingView style={{flex: 1}} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-            <TouchableOpacity style={{flex: 1}} onPress={closeModal} activeOpacity={1} />
-            <View style={styles.modalSheet}>
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Add Plan</Text>
-            <View style={styles.tabRow}>
-              <TouchableOpacity
-                style={[styles.tab, inputMode === 'paste' && styles.tabActive]}
-                onPress={() => { setInputMode('paste'); setImageUri(null); }}>
-                <Text style={[styles.tabText, inputMode === 'paste' && styles.tabTextActive]}>Paste</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.tab, inputMode === 'screenshot' && styles.tabActive]}
-                onPress={() => { setInputMode('screenshot'); setRawText(''); }}>
-                <Text style={[styles.tabText, inputMode === 'screenshot' && styles.tabTextActive]}>Screenshot</Text>
-              </TouchableOpacity>
-            </View>
-            {inputMode === 'paste' ? (
-              <TextInput
-                style={styles.textInput}
-                multiline
-                placeholder="Your booking confirmation text..."
-                placeholderTextColor="#a8a8a8"
-                value={rawText}
-                onChangeText={setRawText}
-                autoFocus
-                textAlignVertical="top"
-              />
-            ) : (
-              <View style={styles.screenshotArea}>
-                {imageUri && (
-                  <Image source={{uri: imageUri}} style={styles.screenshotThumb} resizeMode="cover" />
-                )}
-                <TouchableOpacity style={styles.chooseBtn} onPress={pickScreenshot}>
-                  <Text style={styles.chooseBtnText}>
-                    {imageUri ? 'Change Screenshot' : 'Choose Screenshot'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
-            {parseError ? <Text style={styles.parseError}>{parseError}</Text> : null}
-            <TouchableOpacity
-              style={[styles.parseBtn, (submitting || (inputMode === 'paste' ? !rawText.trim() : !imageUri)) && styles.parseBtnDisabled]}
-              onPress={handleParseAndCreate}
-              disabled={submitting || (inputMode === 'paste' ? !rawText.trim() : !imageUri)}
-              activeOpacity={0.8}>
-              {submitting ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.parseBtnText}>Add Plan</Text>
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity onPress={closeModal} style={styles.cancelBtn}>
-              <Text style={styles.cancelText}>Cancel</Text>
-            </TouchableOpacity>
-            </View>
-          </KeyboardAvoidingView>
+      {/* Content */}
+      {viewMode === 'plans' ? (
+        <ScrollView
+          style={styles.scroll}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          scrollIndicatorInsets={{bottom: 80}}
+          contentContainerStyle={styles.scrollContent}>
+          <DayView
+            date={activeDate}
+            plans={dayPlans}
+            onDeletePlan={handleDeletePlan}
+            onSelectPlan={setSelectedPlan}
+          />
+        </ScrollView>
+      ) : (
+        <View style={styles.placeholderView}>
+          <Text style={styles.placeholderIcon}>{viewMode === 'timeline' ? '📅' : '🗺'}</Text>
+          <Text style={styles.placeholderText}>
+            {viewMode === 'timeline' ? 'Timeline' : 'Itinerary'} coming soon
+          </Text>
         </View>
-      </Modal>
+      )}
+
+      {/* Circular FAB */}
+      {!addingPlan && (
+        <TouchableOpacity style={styles.fab} onPress={() => setAddingPlan(true)} activeOpacity={0.85}>
+          <Text style={styles.fabText}>+</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Add Plan inline overlay */}
+      {addingPlan && (
+        <AddPlanOverlay
+          tripId={tripId}
+          onClose={() => setAddingPlan(false)}
+          onAdded={updatedPlans => {
+            setPlans(updatedPlans);
+            setAddingPlan(false);
+          }}
+        />
+      )}
+
+      {/* Plan Detail sheet */}
+      <PlanDetailSheet
+        plan={selectedPlan}
+        onClose={() => setSelectedPlan(null)}
+        onDelete={planId => {
+          handleDeletePlan(planId);
+          setSelectedPlan(null);
+        }}
+      />
     </View>
   );
 }
 
-const HEADER_BG = '#1a6fad';
-
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: '#f4f4f4'},
-  centered: {flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24},
+  container: {flex: 1, backgroundColor: colors.bgBase},
+  centered: {flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing['2xl']},
 
-  header: {
-    backgroundColor: HEADER_BG,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 4,
-  },
+  // Header
+  header: {},
   navRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 4,
-    gap: 8,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
+    gap: spacing.md,
   },
   glassBtn: {
-    width: 38, height: 38, borderRadius: 999,
+    width: 38, height: 38, borderRadius: radii.chip,
     backgroundColor: 'rgba(255,255,255,0.3)',
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.4)',
   },
-  glassBtnText: {fontSize: 24, color: '#fff', lineHeight: 32, marginTop: -2},
+  glassBtnText: {fontSize: 24, color: colors.surface, lineHeight: 32, marginTop: -2},
   navTitle: {
-    flex: 1, fontSize: 15, fontWeight: '600', color: '#fff',
+    flex: 1, fontSize: typography.md, fontWeight: typography.semibold, color: colors.surface,
     textAlign: 'center', letterSpacing: -0.1,
   },
   glassBtnWide: {
-    height: 38, borderRadius: 999, paddingHorizontal: 14,
+    height: 38, borderRadius: radii.chip, paddingHorizontal: 14,
     backgroundColor: 'rgba(255,255,255,0.3)',
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.4)',
   },
-  glassBtnWideText: {fontSize: 13, color: '#fff', fontWeight: '600'},
+  glassBtnWideText: {fontSize: typography.bodySmall, color: colors.surface, fontWeight: typography.semibold},
 
-  titleBlock: {paddingHorizontal: 22, paddingTop: 12, paddingBottom: 8},
+  titleBlock: {paddingHorizontal: 22, paddingTop: spacing.lg, paddingBottom: spacing.md},
   destLabel: {
-    fontSize: 10, fontWeight: '500', letterSpacing: 0.4,
+    fontSize: typography.xs, fontWeight: typography.medium, letterSpacing: 0.4,
     color: 'rgba(255,255,255,0.78)', textTransform: 'uppercase',
   },
-  tripTitle: {fontSize: 24, fontWeight: '600', color: '#fff', letterSpacing: -0.3, marginTop: 3},
-  tripMeta: {fontSize: 13, color: 'rgba(255,255,255,0.88)', marginTop: 4},
-
-  dayStripScroll: {flexShrink: 0},
-  dayStrip: {flexDirection: 'row', paddingHorizontal: 20, paddingBottom: 10, paddingTop: 2, gap: 8},
-  dayPill: {
-    alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8,
-    borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.22)', minWidth: 52,
+  tripTitle: {
+    fontSize: typography['3xl'] - 4,
+    fontWeight: typography.semibold,
+    color: colors.surface,
+    letterSpacing: -0.3,
+    marginTop: 3,
   },
-  dayPillActive: {backgroundColor: '#fff'},
+  tripMeta: {fontSize: typography.bodySmall, color: 'rgba(255,255,255,0.88)', marginTop: 4},
+
+  // Segmented control
+  segRow: {
+    flexDirection: 'row',
+    marginHorizontal: spacing.xl,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: radii.lg,
+    padding: 3,
+    gap: 0,
+  },
+  segBtn: {
+    flex: 1, paddingVertical: spacing.sm,
+    alignItems: 'center', borderRadius: radii.md,
+  },
+  segBtnActive: {
+    backgroundColor: colors.surface,
+    shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
+  },
+  segBtnText: {fontSize: typography.bodySmall, fontWeight: typography.medium, color: 'rgba(255,255,255,0.8)'},
+  segBtnTextActive: {color: colors.textPrimary, fontWeight: typography.semibold},
+
+  // Day strip
+  dayStripScroll: {flexShrink: 0},
+  dayStrip: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingBottom: spacing.lg,
+    paddingTop: spacing.xs,
+    gap: spacing.md,
+  },
+  dayPill: {
+    alignItems: 'center', paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    borderRadius: radii.chip, backgroundColor: 'rgba(255,255,255,0.22)', minWidth: 52,
+  },
+  dayPillActive: {backgroundColor: colors.surface},
   dayPillLabel: {
-    fontSize: 10, fontWeight: '500', textTransform: 'uppercase',
+    fontSize: typography.xs, fontWeight: typography.medium, textTransform: 'uppercase',
     color: 'rgba(255,255,255,0.75)',
   },
-  dayPillLabelActive: {color: HEADER_BG},
-  dayPillNum: {fontSize: 16, fontWeight: '600', color: 'rgba(255,255,255,0.95)', marginTop: 2},
-  dayPillNumActive: {color: HEADER_BG},
+  dayPillLabelActive: {color: colors.accent},
+  dayPillNum: {fontSize: typography.lg, fontWeight: typography.semibold, color: 'rgba(255,255,255,0.95)', marginTop: 2},
+  dayPillNumActive: {color: colors.accent},
 
+  // Day view
   scroll: {flex: 1},
   scrollContent: {paddingBottom: 100},
-
-  dayView: {padding: 16},
-  dayHeader: {paddingHorizontal: 4, marginBottom: 12},
-  dayHeaderDate: {fontSize: 13, color: '#525252'},
-  dayHeaderCount: {fontSize: 18, fontWeight: '600', color: '#161616', letterSpacing: -0.05, marginTop: 2},
-  planList: {gap: 8},
-  emptyDay: {
-    backgroundColor: '#fff', borderRadius: 18,
-    borderWidth: 1, borderColor: '#e0e0e0',
-    padding: 24, alignItems: 'center',
+  dayView: {padding: spacing.xl},
+  dayHeader: {paddingHorizontal: spacing.xs, marginBottom: spacing.lg},
+  dayHeaderDate: {fontSize: typography.bodySmall, color: colors.textSecondary},
+  dayHeaderCount: {
+    fontSize: typography.xl, fontWeight: typography.semibold,
+    color: colors.textPrimary, letterSpacing: -0.05, marginTop: 2,
   },
-  emptyDayText: {fontSize: 14, color: '#8d8d8d'},
+  planList: {gap: spacing.md},
+  emptyDay: {
+    backgroundColor: colors.surface, borderRadius: radii.card,
+    borderWidth: 1, borderColor: colors.border,
+    padding: spacing['2xl'], alignItems: 'center',
+  },
+  emptyDayText: {fontSize: typography.base, color: colors.textTertiary},
 
+  // Placeholder views
+  placeholderView: {
+    flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.md,
+  },
+  placeholderIcon: {fontSize: 40},
+  placeholderText: {fontSize: typography.base, color: colors.textSecondary},
+
+  // Circular FAB
   fab: {
     position: 'absolute', bottom: 32, right: 24,
-    height: 48, borderRadius: 24, paddingHorizontal: 20,
-    backgroundColor: '#0f62fe',
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: colors.accent,
     alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#0f62fe',
+    shadowColor: colors.accent,
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.4, shadowRadius: 8, elevation: 8,
   },
-  fabText: {fontSize: 15, color: '#fff', fontWeight: '600'},
+  fabText: {fontSize: typography['2xl'], color: colors.surface, fontWeight: typography.light, lineHeight: 30},
 
-  modalOverlay: {flex: 1, backgroundColor: 'rgba(0,0,0,0.4)'},
-  modalSheet: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    padding: 24, paddingBottom: 40,
-  },
-  modalHandle: {
-    width: 36, height: 4, borderRadius: 2,
-    backgroundColor: '#e0e0e0',
-    alignSelf: 'center', marginBottom: 20,
-  },
-  modalTitle: {fontSize: 18, fontWeight: '600', color: '#161616', marginBottom: 16},
-  tabRow: {
-    flexDirection: 'row', backgroundColor: '#f4f4f4',
-    borderRadius: 10, padding: 3, marginBottom: 16,
-  },
-  tab: {flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8},
-  tabActive: {backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, elevation: 2},
-  tabText: {fontSize: 14, fontWeight: '500', color: '#8d8d8d'},
-  tabTextActive: {color: '#161616', fontWeight: '600'},
-  screenshotArea: {
-    height: 160, borderWidth: 1, borderColor: '#e0e0e0', borderRadius: 12,
-    backgroundColor: '#f4f4f4', alignItems: 'center', justifyContent: 'center',
-    marginBottom: 12, gap: 12,
-  },
-  screenshotThumb: {width: 80, height: 80, borderRadius: 8},
-  chooseBtn: {
-    borderWidth: 1, borderColor: '#0f62fe', borderRadius: 8,
-    paddingVertical: 8, paddingHorizontal: 16,
-  },
-  chooseBtnText: {fontSize: 14, color: '#0f62fe', fontWeight: '500'},
-  textInput: {
-    borderWidth: 1, borderColor: '#e0e0e0', borderRadius: 12,
-    padding: 12, height: 160, fontSize: 14, color: '#161616',
-    backgroundColor: '#f4f4f4', marginBottom: 12,
-  },
-  parseError: {fontSize: 13, color: '#da1e28', marginBottom: 12},
-  parseBtn: {
-    backgroundColor: '#0f62fe', borderRadius: 12,
-    paddingVertical: 14, alignItems: 'center', marginBottom: 8,
-  },
-  parseBtnDisabled: {opacity: 0.45},
-  parseBtnText: {fontSize: 15, fontWeight: '600', color: '#fff'},
-  cancelBtn: {alignItems: 'center', paddingVertical: 10},
-  cancelText: {fontSize: 15, color: '#525252'},
+  // Error
+  errorText: {fontSize: typography.md, color: colors.danger, textAlign: 'center'},
+  backLink: {fontSize: typography.md, color: colors.accent, marginTop: spacing.lg},
 
-  errorText: {fontSize: 15, color: '#da1e28', textAlign: 'center'},
-  backLink: {fontSize: 15, color: '#0f62fe', marginTop: 12},
+  // ── Add Plan overlay ─────────────────────────────────────────────────────────
+  addOverlay: {
+    position: 'absolute', inset: 0,
+    backgroundColor: colors.bgBase,
+    zIndex: 10,
+  },
+  addNavBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  addNavBtn: {minWidth: 64},
+  addNavBtnText: {fontSize: typography.base, color: colors.accent},
+  addNavTitle: {
+    fontSize: typography.base, fontWeight: typography.semibold, color: colors.textPrimary,
+  },
+
+  addPickerContent: {padding: spacing.xl},
+  addPickerSub: {
+    fontSize: typography.base, color: colors.textSecondary,
+    marginBottom: spacing.xl,
+  },
+
+  // Choice cards
+  choiceCard: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 14,
+    padding: spacing.xl,
+    backgroundColor: colors.surface,
+    borderWidth: 1, borderColor: colors.border,
+    borderRadius: radii.row,
+    marginBottom: spacing.lg,
+  },
+  choiceIcon: {
+    width: 44, height: 44, borderRadius: radii.xl,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  choiceIconText: {fontSize: typography.xl},
+  choiceText: {flex: 1},
+  choiceTitle: {fontSize: typography.base, fontWeight: typography.semibold, color: colors.textPrimary, marginBottom: 4},
+  choiceSub: {fontSize: typography.bodySmall, color: colors.textSecondary, lineHeight: 18},
+  choiceTags: {flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md},
+  choiceTag: {
+    borderRadius: radii.chip, paddingHorizontal: spacing.md, paddingVertical: 3,
+    backgroundColor: colors.bgBase3,
+  },
+  choiceTagText: {fontSize: typography.xs, color: colors.textSecondary},
+  choiceArrow: {fontSize: typography.xl, color: colors.textTertiary, alignSelf: 'center'},
+
+  // Type picker
+  typePickerLabel: {
+    fontSize: typography.xs + 1, fontWeight: typography.medium,
+    letterSpacing: 0.32, textTransform: 'uppercase',
+    color: colors.textTertiary, marginBottom: spacing.lg,
+  },
+  typeRow: {flexDirection: 'row', gap: spacing.md, marginBottom: spacing.xl},
+  typeBtn: {
+    flex: 1, alignItems: 'center', paddingVertical: spacing.lg,
+    borderWidth: 1, borderColor: colors.border,
+    borderRadius: radii.xl, gap: spacing.sm,
+    backgroundColor: colors.surface,
+  },
+  typeBtnActive: {borderColor: colors.accent, backgroundColor: 'rgba(15,98,254,0.06)'},
+  typeBtnIcon: {fontSize: typography.xl},
+  typeBtnLabel: {fontSize: typography.bodySmall, color: colors.textSecondary},
+  typeBtnLabelActive: {color: colors.accent, fontWeight: typography.semibold},
+
+  // Paste step
+  fieldLabel: {
+    fontSize: typography.bodySmall, color: colors.textSecondary,
+    marginBottom: spacing.sm,
+  },
+  pasteInput: {
+    borderWidth: 1, borderColor: colors.border, borderRadius: radii.xl,
+    padding: spacing.lg, height: 160, fontSize: typography.base,
+    color: colors.textPrimary, backgroundColor: colors.bgBase,
+    marginBottom: spacing.md, textAlignVertical: 'top',
+  },
+  pasteLinks: {flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.xl},
+  pasteLinkText: {fontSize: typography.base, color: colors.textSecondary},
+  parseError: {fontSize: typography.bodySmall, color: colors.danger, marginBottom: spacing.lg},
+  detectBtn: {
+    backgroundColor: colors.accent, borderRadius: radii.xl,
+    paddingVertical: 14, alignItems: 'center', marginBottom: spacing.xl,
+  },
+  detectBtnDisabled: {opacity: 0.45},
+  detectBtnText: {fontSize: typography.md, fontWeight: typography.semibold, color: colors.surface},
+  detectSectionLabel: {
+    fontSize: typography.xs + 1, fontWeight: typography.medium,
+    letterSpacing: 0.32, textTransform: 'uppercase',
+    color: colors.textTertiary, marginBottom: spacing.lg,
+  },
+  detectRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
+  },
+  detectIcon: {fontSize: typography.xl, width: 24},
+  detectLabel: {fontSize: typography.base, fontWeight: typography.medium, color: colors.textPrimary},
+  detectSub: {fontSize: typography.bodySmall, color: colors.textSecondary},
+
+  // Manual entry
+  manualInput: {
+    borderWidth: 1, borderColor: colors.border, borderRadius: radii.xl,
+    padding: spacing.lg, fontSize: typography.base,
+    color: colors.textPrimary, backgroundColor: colors.bgBase,
+    marginBottom: spacing.xl,
+  },
 });
