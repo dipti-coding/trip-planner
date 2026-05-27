@@ -1,5 +1,5 @@
 import axios from 'axios';
-import {LOCAL_API_URL} from '@env';
+import Config from 'react-native-config';
 
 const DEV_EMAIL = 'test@example.com';
 const DEV_PASSWORD = 'testpass123';
@@ -14,7 +14,7 @@ export async function getToken(): Promise<string> {
   params.append('username', DEV_EMAIL);
   params.append('password', DEV_PASSWORD);
   const res = await axios.post(
-    `${LOCAL_API_URL}/auth/token`,
+    `${Config.LOCAL_API_URL}/auth/token`,
     params.toString(),
     {headers: {'Content-Type': 'application/x-www-form-urlencoded'}},
   );
