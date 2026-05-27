@@ -28,7 +28,7 @@ export const colors = {
   danger: '#da1e28',
   dangerSubtle: '#fff1f1',
   success: '#198038',
-  successSubtle: 'rgba(25,128,56,0.14)',
+  successSubtle: '#defbe6',
   warn: '#f1c21b',
   warnSubtle: 'rgba(255,243,196,0.18)',
 
@@ -59,6 +59,7 @@ export const typography = {
   // Scale
   xs: 10,
   sm: 12,
+  bodySmall: 13,
   base: 14,
   md: 15,
   lg: 16,
@@ -68,6 +69,7 @@ export const typography = {
   '4xl': 32,
 
   // Weights
+  light: '300' as const,
   regular: '400' as const,
   medium: '500' as const,
   semibold: '600' as const,
@@ -92,3 +94,33 @@ export const spacing = {
   xl: 16,
   '2xl': 24,
 } as const;
+
+// Destination cover gradients (from designs/PlanMyTrip.html cover-* classes)
+// Colors flow top→bottom matching the design's vertical linear gradients
+const coverPalette: Record<string, string[]> = {
+  tokyo:          ['#FFB5A8', '#FF8E89', '#C9627E', '#6B3F66'],
+  iceland:        ['#2A4374', '#5B7BB0', '#8FB1D9', '#C5DCEE'],
+  paris:          ['#F5C97E', '#E89B6A', '#E89B6A', '#B16F7E'],
+  spring:         ['#FFCDA0', '#FF9C8B', '#FF9C8B', '#B16484'],
+  summer:         ['#FFD27A', '#FF8E60', '#FF8E60', '#B83A6D'],
+  fall:           ['#FFB66E', '#D86F49', '#D86F49', '#6B3D5C'],
+  winter:         ['#B8D0E8', '#6F8FB9', '#6F8FB9', '#2E3E73'],
+  beach:          ['#FFE0A0', '#66C4D6', '#66C4D6', '#1A6A98'],
+  mountains:      ['#4A6A8F', '#7AA0BE', '#7AA0BE', '#BFD9E8'],
+  default:        ['#4FACEE', '#76C2F1', '#BCDEEF', '#BCDEEF'],
+};
+
+const SEASON_KEYS = ['spring', 'summer', 'fall', 'winter'] as const;
+
+export function coverGradient(city: string): string[] {
+  const key = city.toLowerCase().replace(/\s+/g, '');
+  if (key.includes('tokyo') || key.includes('japan'))     return coverPalette.tokyo;
+  if (key.includes('iceland') || key.includes('reykjavik')) return coverPalette.iceland;
+  if (key.includes('paris') || key.includes('france'))    return coverPalette.paris;
+  if (key.includes('beach') || key.includes('miami') || key.includes('bali')) return coverPalette.beach;
+  if (key.includes('mount') || key.includes('alps') || key.includes('hike')) return coverPalette.mountains;
+  // deterministic hash → one of the four city-season variants
+  let hash = 0;
+  for (let i = 0; i < city.length; i++) hash = (hash * 31 + city.charCodeAt(i)) & 0xffff;
+  return coverPalette[SEASON_KEYS[hash % 4]];
+}
