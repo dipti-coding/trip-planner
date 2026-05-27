@@ -16,6 +16,7 @@ dist/
 
 # Environment
 .env
+.env.docker
 
 # Terraform
 infra/.terraform/
