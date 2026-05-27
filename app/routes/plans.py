@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
+from app.auth import get_current_user
 from app.db import get_db
 from app.models import Plan, Trip
 from app.schemas.plan import PLAN_DETAILS_SCHEMA, ParseAndCreateRequest, PlanCreate, PlanResponse
@@ -15,7 +16,7 @@ router = APIRouter(tags=["plans"])
 
 
 @router.get("/trips/{trip_id}/plans", response_model=list[PlanResponse])
-def get_trip_plans(trip_id: UUID, db: Session = Depends(get_db)):
+def get_trip_plans(trip_id: UUID, db: Session = Depends(get_db), _: str = Depends(get_current_user)):
     trip = db.query(Trip).filter(Trip.id == trip_id).first()
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
@@ -28,7 +29,7 @@ def get_trip_plans(trip_id: UUID, db: Session = Depends(get_db)):
 
 
 @router.post("/trips/{trip_id}/plans", response_model=PlanResponse, status_code=201)
-def create_plan(trip_id: UUID, body: PlanCreate, db: Session = Depends(get_db)):
+def create_plan(trip_id: UUID, body: PlanCreate, db: Session = Depends(get_db), _: str = Depends(get_current_user)):
     trip = db.query(Trip).filter(Trip.id == trip_id).first()
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
@@ -86,7 +87,7 @@ def _create_plan_from_text(trip: Trip, raw_text: str, db: Session) -> Plan:
 
 
 @router.post("/trips/{trip_id}/plans/parse-and-create", response_model=PlanResponse, status_code=201)
-def parse_and_create_plan(trip_id: UUID, body: ParseAndCreateRequest, db: Session = Depends(get_db)):
+def parse_and_create_plan(trip_id: UUID, body: ParseAndCreateRequest, db: Session = Depends(get_db), _: str = Depends(get_current_user)):
     trip = db.query(Trip).filter(Trip.id == trip_id).first()
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
@@ -95,7 +96,7 @@ def parse_and_create_plan(trip_id: UUID, body: ParseAndCreateRequest, db: Sessio
 
 @router.post("/trips/{trip_id}/plans/parse-screenshot", response_model=PlanResponse, status_code=201)
 async def parse_screenshot_and_create_plan(
-    trip_id: UUID, image: UploadFile = File(...), db: Session = Depends(get_db)
+    trip_id: UUID, image: UploadFile = File(...), db: Session = Depends(get_db), _: str = Depends(get_current_user)
 ):
     trip = db.query(Trip).filter(Trip.id == trip_id).first()
     if not trip:
@@ -113,7 +114,7 @@ async def parse_screenshot_and_create_plan(
 
 
 @router.get("/plans/{plan_id}", response_model=PlanResponse)
-def get_plan(plan_id: UUID, db: Session = Depends(get_db)):
+def get_plan(plan_id: UUID, db: Session = Depends(get_db), _: str = Depends(get_current_user)):
     plan = db.query(Plan).filter(Plan.id == plan_id).first()
     if not plan:
         raise HTTPException(status_code=404, detail="Plan not found")
@@ -121,7 +122,7 @@ def get_plan(plan_id: UUID, db: Session = Depends(get_db)):
 
 
 @router.delete("/plans/{plan_id}", status_code=204)
-def delete_plan(plan_id: UUID, db: Session = Depends(get_db)):
+def delete_plan(plan_id: UUID, db: Session = Depends(get_db), _: str = Depends(get_current_user)):
     plan = db.query(Plan).filter(Plan.id == plan_id).first()
     if not plan:
         raise HTTPException(status_code=404, detail="Plan not found")

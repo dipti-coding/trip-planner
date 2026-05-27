@@ -1,8 +1,26 @@
 set dotenv-load
 export PATH := ".venv/bin:" + env_var('PATH')
 
+# Generate .env.docker from .env (escapes $ -> $$ so Docker Compose doesn't interpolate values)
+gen-docker-env:
+    #!/usr/bin/env python3
+    import re
+    with open('.env') as f:
+        lines = f.read().splitlines()
+    out = []
+    for line in lines:
+        if line and not line.startswith('#') and '=' in line:
+            key, _, val = line.partition('=')
+            val = val.strip("'\"")       # strip quotes used for local-dev safety
+            val = val.replace('$', '$$') # escape $ so Docker Compose doesn't interpolate
+            out.append(f"{key}={val}")
+        else:
+            out.append(line)
+    with open('.env.docker', 'w') as f:
+        f.write('\n'.join(out) + '\n')
+
 # Start Postgres + API in Docker (builds image if needed)
-up:
+up: gen-docker-env
     docker compose up -d --build
     @echo "Waiting for Postgres to be ready..."
     @until docker compose exec postgres pg_isready -U trip_planner > /dev/null 2>&1; do sleep 1; done
