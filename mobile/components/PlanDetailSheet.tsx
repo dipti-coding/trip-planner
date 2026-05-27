@@ -253,6 +253,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
     marginTop: spacing.xl,
+    paddingBottom: 34,
   },
   editBtn: {
     flex: 1, paddingVertical: spacing.xl,

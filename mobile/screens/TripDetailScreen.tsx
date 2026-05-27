@@ -23,10 +23,10 @@ import client from '../api/client';
 import PlanCard from '../components/PlanCard';
 import PlanDetailSheet from '../components/PlanDetailSheet';
 import type {Plan, Trip} from '../types';
-import {dateRange, fmtDow, fmtDayLabel, fmtDayNum, fmtShort} from '../utils/dates';
+import {dateRange, fmtDow, fmtDayLabel, fmtDayNum, fmtShort, fmtTime, fmtDuration} from '../utils/dates';
 import type {RootStackParamList} from '../App';
 import {colors, coverGradient, radii, spacing, typography} from '../theme';
-import {TYPE_META} from '../assets/planTypes';
+import {TYPE_META, DEFAULT_META} from '../assets/planTypes';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'TripDetail'>;
@@ -57,7 +57,13 @@ const DETECT_TYPES = [
   {icon: '🍴', label: 'Food', sub: 'Restaurant, party size, OpenTable'},
 ];
 
-function DayPill({date, active, onPress}: {date: string; active: boolean; onPress: () => void}) {
+function DayPill({date, active, onPress, weatherIcon, tempF}: {
+  date: string;
+  active: boolean;
+  onPress: () => void;
+  weatherIcon?: string;
+  tempF?: number;
+}) {
   return (
     <TouchableOpacity
       style={[styles.dayPill, active && styles.dayPillActive]}
@@ -69,37 +75,45 @@ function DayPill({date, active, onPress}: {date: string; active: boolean; onPres
       <Text style={[styles.dayPillNum, active && styles.dayPillNumActive]}>
         {fmtDayNum(date)}
       </Text>
+      {tempF != null && (
+        <Text style={[styles.dayPillWx, active && styles.dayPillWxActive]}>
+          {weatherIcon ?? '☀'} {Math.round(tempF)}°
+        </Text>
+      )}
     </TouchableOpacity>
   );
 }
 
-function DayView({date, plans, onDeletePlan, onSelectPlan}: {
-  date: string;
-  plans: Plan[];
-  onDeletePlan: (id: string) => void;
-  onSelectPlan: (plan: Plan) => void;
-}) {
+function DayHeader({date, plans}: {date: string; plans: Plan[]}) {
   const totalCost = plans.reduce((sum, p) => {
     const c = (p.details as any)?.cost;
     return sum + (typeof c === 'number' ? c : 0);
   }, 0);
+  return (
+    <View style={styles.dayHeader}>
+      <Text style={styles.dayHeaderDate}>{fmtDow(date)}</Text>
+      <Text style={styles.dayHeaderCount}>
+        {plans.length} plan{plans.length !== 1 ? 's' : ''}
+        {totalCost > 0 ? ` · $${totalCost}` : ''}
+      </Text>
+    </View>
+  );
+}
 
+function DayView({date, plans, onSelectPlan}: {
+  date: string;
+  plans: Plan[];
+  onSelectPlan: (plan: Plan) => void;
+}) {
   return (
     <View style={styles.dayView}>
-      <View style={styles.dayHeader}>
-        <Text style={styles.dayHeaderDate}>{fmtDow(date)}</Text>
-        <Text style={styles.dayHeaderCount}>
-          {plans.length} plan{plans.length !== 1 ? 's' : ''}
-          {totalCost > 0 ? ` · $${totalCost}` : ''}
-        </Text>
-      </View>
+      <DayHeader date={date} plans={plans} />
       <View style={styles.planList}>
         {plans.map(p => (
           <PlanCard
             key={p.id}
             plan={p}
             onPress={() => onSelectPlan(p)}
-            onDelete={() => onDeletePlan(p.id)}
           />
         ))}
         {plans.length === 0 && (
@@ -109,6 +123,120 @@ function DayView({date, plans, onDeletePlan, onSelectPlan}: {
         )}
       </View>
     </View>
+  );
+}
+
+const START_HOUR = 6;
+const END_HOUR = 22;
+const HOUR_HEIGHT = 64;
+const LABEL_WIDTH = 36;
+const HOURS = Array.from({length: END_HOUR - START_HOUR}, (_, i) => START_HOUR + i);
+
+function getMinutesFromMidnight(iso: string): number {
+  const d = new Date(iso);
+  return d.getHours() * 60 + d.getMinutes();
+}
+
+function TimelineView({date, plans, onSelectPlan}: {
+  date: string;
+  plans: Plan[];
+  onSelectPlan: (plan: Plan) => void;
+}) {
+  const dayPlans = plans.filter(p => p.start_datetime?.slice(0, 10) === date && p.start_datetime);
+  const gridHeight = (END_HOUR - START_HOUR) * HOUR_HEIGHT;
+
+  return (
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+      <DayHeader date={date} plans={dayPlans} />
+      <View style={{height: gridHeight, position: 'relative', marginTop: spacing.md}}>
+        {HOURS.map(h => (
+          <View
+            key={h}
+            style={{
+              position: 'absolute',
+              top: (h - START_HOUR) * HOUR_HEIGHT,
+              left: 0, right: 0,
+              flexDirection: 'row',
+              alignItems: 'flex-start',
+            }}>
+            <Text style={styles.timelineHourLabel}>
+              {h === 12 ? '12p' : h > 12 ? `${h - 12}p` : `${h}a`}
+            </Text>
+            <View style={styles.timelineGridLine} />
+          </View>
+        ))}
+        {dayPlans.map(p => {
+          const startMin = getMinutesFromMidnight(p.start_datetime!);
+          const endMin = p.end_datetime ? getMinutesFromMidnight(p.end_datetime) : startMin + 60;
+          const top = (startMin - START_HOUR * 60) / 60 * HOUR_HEIGHT;
+          const height = Math.max((endMin - startMin) / 60 * HOUR_HEIGHT, 44);
+          const meta = TYPE_META[p.type] ?? DEFAULT_META;
+          const dur = fmtDuration(p.start_datetime, p.end_datetime);
+          return (
+            <TouchableOpacity
+              key={p.id}
+              onPress={() => onSelectPlan(p)}
+              activeOpacity={0.8}
+              style={[styles.timelineBlock, {
+                top,
+                height,
+                left: LABEL_WIDTH + 8,
+                right: spacing.xl,
+                backgroundColor: meta.color + '1E',
+                borderLeftColor: meta.color,
+              }]}>
+              <Text style={[styles.timelineBlockTime, {color: meta.color}]}>
+                {fmtTime(p.start_datetime)}{dur ? ` · ${dur}` : ''}
+              </Text>
+              <Text style={styles.timelineBlockTitle} numberOfLines={2}>{p.title}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </ScrollView>
+  );
+}
+
+function ItineraryView({trip, plans, days}: {
+  trip: Trip;
+  plans: Plan[];
+  days: string[];
+}) {
+  // Reverse so dark end is at top → white text stays readable on all palettes
+  const gradient = [...coverGradient(trip.destination_city)].reverse();
+  return (
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.itinContent}>
+      {days.map((date, i) => {
+        const dp = plans.filter(p => p.start_datetime?.slice(0, 10) === date);
+        const cost = dp.reduce((s, p) => s + (((p.details as any)?.cost ?? 0) as number), 0);
+        return (
+          <View key={date} style={styles.itinDayCard}>
+            <LinearGradient colors={gradient} style={styles.itinDayHeader}>
+              <Text style={styles.itinDayNum}>
+                DAY {i + 1} · {fmtDayLabel(date).toUpperCase()}
+              </Text>
+              <Text style={styles.itinDayDate}>{fmtDow(date)}</Text>
+            </LinearGradient>
+            {dp.length === 0 ? (
+              <Text style={styles.itinEmpty}>Nothing planned</Text>
+            ) : (
+              dp.map(p => (
+                <View key={p.id} style={styles.itinPlanRow}>
+                  <Text style={styles.itinTime}>{fmtTime(p.start_datetime)}</Text>
+                  <Text style={styles.itinTitle} numberOfLines={1}>{p.title}</Text>
+                </View>
+              ))
+            )}
+            <View style={styles.itinFooter}>
+              <Text style={styles.itinFooterText}>
+                {dp.length} plan{dp.length !== 1 ? 's' : ''}
+                {cost > 0 ? ` · $${cost}` : ''}
+              </Text>
+            </View>
+          </View>
+        );
+      })}
+    </ScrollView>
   );
 }
 
@@ -460,28 +588,30 @@ export default function TripDetailScreen({navigation, route}: Props) {
             ))}
           </View>
 
-          {/* Day strip */}
-          <ScrollView
-            ref={stripRef}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            decelerationRate="fast"
-            contentContainerStyle={styles.dayStrip}
-            style={styles.dayStripScroll}>
-            {days.map((date, i) => (
-              <DayPill
-                key={date}
-                date={date}
-                active={i === dayIdx}
-                onPress={() => setDayIdx(i)}
-              />
-            ))}
-          </ScrollView>
+          {/* Day strip — hidden in itinerary mode */}
+          {viewMode !== 'itinerary' && (
+            <ScrollView
+              ref={stripRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              decelerationRate="fast"
+              contentContainerStyle={styles.dayStrip}
+              style={styles.dayStripScroll}>
+              {days.map((date, i) => (
+                <DayPill
+                  key={date}
+                  date={date}
+                  active={i === dayIdx}
+                  onPress={() => setDayIdx(i)}
+                />
+              ))}
+            </ScrollView>
+          )}
         </SafeAreaView>
       </LinearGradient>
 
       {/* Content */}
-      {viewMode === 'plans' ? (
+      {viewMode === 'plans' && (
         <ScrollView
           style={styles.scroll}
           onScroll={handleScroll}
@@ -491,17 +621,19 @@ export default function TripDetailScreen({navigation, route}: Props) {
           <DayView
             date={activeDate}
             plans={dayPlans}
-            onDeletePlan={handleDeletePlan}
             onSelectPlan={setSelectedPlan}
           />
         </ScrollView>
-      ) : (
-        <View style={styles.placeholderView}>
-          <Text style={styles.placeholderIcon}>{viewMode === 'timeline' ? '📅' : '🗺'}</Text>
-          <Text style={styles.placeholderText}>
-            {viewMode === 'timeline' ? 'Timeline' : 'Itinerary'} coming soon
-          </Text>
-        </View>
+      )}
+      {viewMode === 'timeline' && (
+        <TimelineView
+          date={activeDate}
+          plans={dayPlans}
+          onSelectPlan={setSelectedPlan}
+        />
+      )}
+      {viewMode === 'itinerary' && (
+        <ItineraryView trip={trip} plans={plans} days={days} />
       )}
 
       {/* Circular FAB */}
@@ -546,7 +678,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
+    paddingTop: spacing.xs,
     paddingBottom: spacing.xs,
     gap: spacing.md,
   },
@@ -586,9 +718,9 @@ const styles = StyleSheet.create({
   // Segmented control
   segRow: {
     flexDirection: 'row',
-    marginHorizontal: spacing.xl,
-    marginTop: spacing.md,
-    marginBottom: spacing.sm,
+    marginHorizontal: 20,
+    marginTop: spacing.xs,
+    marginBottom: 10,
     backgroundColor: 'rgba(255,255,255,0.18)',
     borderRadius: radii.lg,
     padding: 3,
@@ -610,34 +742,44 @@ const styles = StyleSheet.create({
   dayStrip: {
     flexDirection: 'row',
     paddingHorizontal: 20,
-    paddingBottom: spacing.lg,
+    paddingBottom: 10,
     paddingTop: spacing.xs,
     gap: spacing.md,
   },
   dayPill: {
-    alignItems: 'center', paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderRadius: radii.chip, backgroundColor: 'rgba(255,255,255,0.22)', minWidth: 52,
+    alignItems: 'center',
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.lg,
+    backgroundColor: 'transparent',
+    minWidth: 40,
   },
-  dayPillActive: {backgroundColor: colors.surface},
+  dayPillActive: {backgroundColor: 'rgba(255,255,255,0.22)'},
   dayPillLabel: {
     fontSize: typography.xs, fontWeight: typography.medium, textTransform: 'uppercase',
     color: 'rgba(255,255,255,0.75)',
   },
-  dayPillLabelActive: {color: colors.accent},
+  dayPillLabelActive: {color: colors.surface},
   dayPillNum: {fontSize: typography.lg, fontWeight: typography.semibold, color: 'rgba(255,255,255,0.95)', marginTop: 2},
-  dayPillNumActive: {color: colors.accent},
+  dayPillNumActive: {color: colors.surface},
+  dayPillWx: {fontSize: typography.xs, color: 'rgba(255,255,255,0.7)', marginTop: 1},
+  dayPillWxActive: {color: 'rgba(255,255,255,0.9)'},
 
   // Day view
   scroll: {flex: 1},
   scrollContent: {paddingBottom: 100},
-  dayView: {padding: spacing.xl},
-  dayHeader: {paddingHorizontal: spacing.xs, marginBottom: spacing.lg},
+  dayView: {
+    paddingTop: 20,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: 0,
+  },
+  dayHeader: {paddingHorizontal: spacing.xs, marginBottom: spacing.xs},
   dayHeaderDate: {fontSize: typography.bodySmall, color: colors.textSecondary},
   dayHeaderCount: {
     fontSize: typography.xl, fontWeight: typography.semibold,
     color: colors.textPrimary, letterSpacing: -0.05, marginTop: 2,
   },
-  planList: {gap: spacing.md},
+  planList: {gap: spacing.lg, marginTop: spacing.xs},
   emptyDay: {
     backgroundColor: colors.surface, borderRadius: radii.card,
     borderWidth: 1, borderColor: colors.border,
@@ -645,12 +787,105 @@ const styles = StyleSheet.create({
   },
   emptyDayText: {fontSize: typography.base, color: colors.textTertiary},
 
-  // Placeholder views
-  placeholderView: {
-    flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.md,
+  // Timeline view
+  timelineHourLabel: {
+    width: LABEL_WIDTH,
+    fontSize: typography.xs,
+    color: colors.textTertiary,
+    paddingTop: 0,
+    textAlign: 'right',
+    paddingRight: spacing.md,
   },
-  placeholderIcon: {fontSize: 40},
-  placeholderText: {fontSize: typography.base, color: colors.textSecondary},
+  timelineGridLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+    marginTop: 7,
+  },
+  timelineBlock: {
+    position: 'absolute',
+    borderLeftWidth: 3,
+    borderRadius: radii.md,
+    padding: spacing.sm,
+    overflow: 'hidden',
+  },
+  timelineBlockTime: {
+    fontSize: typography.xs,
+    fontWeight: typography.semibold,
+    marginBottom: 2,
+  },
+  timelineBlockTitle: {
+    fontSize: typography.bodySmall,
+    color: colors.textPrimary,
+    fontWeight: typography.medium,
+  },
+
+  // Itinerary view
+  itinContent: {paddingBottom: 100, gap: spacing.xl},
+  itinDayCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.card,
+    overflow: 'hidden',
+    marginHorizontal: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  itinDayHeader: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+  },
+  itinDayNum: {
+    fontSize: typography.xs,
+    fontWeight: typography.semibold,
+    color: 'rgba(255,255,255,0.75)',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  itinDayDate: {
+    fontSize: typography['2xl'] - 4,
+    fontWeight: typography.semibold,
+    color: colors.surface,
+    marginTop: 2,
+    letterSpacing: -0.2,
+  },
+  itinPlanRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    gap: spacing.lg,
+  },
+  itinTime: {
+    fontSize: typography.bodySmall,
+    color: colors.textSecondary,
+    fontVariant: ['tabular-nums' as any],
+    width: 40,
+    flexShrink: 0,
+  },
+  itinTitle: {
+    flex: 1,
+    fontSize: typography.base,
+    color: colors.textPrimary,
+    fontWeight: typography.medium,
+  },
+  itinEmpty: {
+    fontSize: typography.bodySmall,
+    color: colors.textTertiary,
+    padding: spacing.xl,
+    textAlign: 'center',
+  },
+  itinFooter: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+  },
+  itinFooterText: {
+    fontSize: typography.bodySmall,
+    color: colors.textSecondary,
+  },
 
   // Circular FAB
   fab: {

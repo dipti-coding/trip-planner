@@ -95,19 +95,19 @@ export const spacing = {
   '2xl': 24,
 } as const;
 
-// Destination cover gradients (from designs/PlanMyTrip.html cover-* classes)
-// Colors flow top→bottom matching the design's vertical linear gradients
+// Destination cover gradients — muted, soothing tones, dark→light top-to-bottom
+// so white text on the top portion is always readable
 const coverPalette: Record<string, string[]> = {
-  tokyo:          ['#FFB5A8', '#FF8E89', '#C9627E', '#6B3F66'],
-  iceland:        ['#2A4374', '#5B7BB0', '#8FB1D9', '#C5DCEE'],
-  paris:          ['#F5C97E', '#E89B6A', '#E89B6A', '#B16F7E'],
-  spring:         ['#FFCDA0', '#FF9C8B', '#FF9C8B', '#B16484'],
-  summer:         ['#FFD27A', '#FF8E60', '#FF8E60', '#B83A6D'],
-  fall:           ['#FFB66E', '#D86F49', '#D86F49', '#6B3D5C'],
-  winter:         ['#B8D0E8', '#6F8FB9', '#6F8FB9', '#2E3E73'],
-  beach:          ['#FFE0A0', '#66C4D6', '#66C4D6', '#1A6A98'],
-  mountains:      ['#4A6A8F', '#7AA0BE', '#7AA0BE', '#BFD9E8'],
-  default:        ['#4FACEE', '#76C2F1', '#BCDEEF', '#BCDEEF'],
+  tokyo:     ['#5C4A7A', '#8B6BA8', '#B8A0CC', '#DDD0E8'],  // muted plum
+  iceland:   ['#2A4A6E', '#4A78A0', '#7AA8C8', '#B0CDE0'],  // muted arctic blue
+  paris:     ['#6B4E38', '#9C7A58', '#C4A882', '#E4D0B4'],  // muted warm amber
+  spring:    ['#3A6648', '#5E9870', '#90C8A0', '#C4E4CC'],  // muted sage green
+  summer:    ['#7A4A28', '#B07848', '#D4A870', '#EDD0A0'],  // muted terracotta
+  fall:      ['#5C3A28', '#8C6248', '#B89078', '#D8BCA8'],  // muted brown
+  winter:    ['#2E4060', '#4A6488', '#7898B8', '#A8BED4'],  // muted slate blue
+  beach:     ['#1E6878', '#3898AA', '#70C0CC', '#B0DCE0'],  // muted teal
+  mountains: ['#3A5070', '#5A7898', '#88A8C4', '#B8CCD8'],  // muted steel blue
+  default:   ['#3A5888', '#5878A8', '#88A0C8', '#B8C8E0'],  // muted blue
 };
 
 const SEASON_KEYS = ['spring', 'summer', 'fall', 'winter'] as const;

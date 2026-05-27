@@ -280,6 +280,7 @@ function AddTripWizard({
     setCreating(true);
     try {
       const res = await client.post<Trip>('/trips', {
+        user_id: '00000000-0000-0000-0000-000000000001',
         name: tripName.trim() || defaultName,
         destination_city: dests.map(d => d.city).join(', '),
         start_date: startDate ?? new Date().toISOString().slice(0, 10),
