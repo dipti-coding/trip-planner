@@ -1,5 +1,6 @@
 import React from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {colors, radii, spacing, typography} from '../theme';
 import {TYPE_META, DEFAULT_META} from '../assets/planTypes';
 import type {Plan} from '../types';
 import {fmtTime, fmtDuration} from '../utils/dates';
@@ -65,27 +66,27 @@ export default function PlanCard({plan, onPress, onDelete}: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 18,
+    backgroundColor: colors.surface,
+    borderRadius: radii.card,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border,
     overflow: 'hidden',
   },
-  row: {flexDirection: 'row', alignItems: 'center', padding: 12, gap: 12},
+  row: {flexDirection: 'row', alignItems: 'center', padding: spacing.lg, gap: spacing.lg},
   thumb: {
-    width: 56, height: 56, borderRadius: 10,
+    width: 56, height: 56, borderRadius: radii.lg,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  thumbIcon: {fontSize: 24},
+  thumbIcon: {fontSize: typography.xl},
   content: {flex: 1, minWidth: 0},
-  timeText: {fontSize: 13, fontWeight: '600', color: '#161616', marginBottom: 3},
-  durText: {fontSize: 13, fontWeight: '400', color: '#525252'},
-  title: {fontSize: 15, fontWeight: '600', color: '#161616', letterSpacing: -0.1},
-  subtitle: {fontSize: 12, color: '#525252', marginTop: 1},
+  timeText: {fontSize: typography.sm + 1, fontWeight: typography.semibold, color: colors.textPrimary, marginBottom: 3},
+  durText: {fontSize: typography.sm + 1, fontWeight: typography.regular, color: colors.textSecondary},
+  title: {fontSize: typography.md, fontWeight: typography.semibold, color: colors.textPrimary, letterSpacing: -0.1},
+  subtitle: {fontSize: typography.sm, color: colors.textSecondary, marginTop: 1},
   deleteBtn: {
     width: 28, height: 28, borderRadius: 14,
-    backgroundColor: '#fff1f1',
+    backgroundColor: colors.dangerSubtle,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  deleteBtnText: {fontSize: 18, color: '#da1e28', fontWeight: '400'},
+  deleteBtnText: {fontSize: typography.xl, color: colors.danger, fontWeight: typography.regular},
 });
