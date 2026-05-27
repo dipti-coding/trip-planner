@@ -19,7 +19,26 @@
 /models     SQLAlchemy / Pydantic models
 /routes     API route handlers
 /services   Business logic
+/designs    Visual design exports (source of truth for UI)
 ```
+
+## UI Design System
+
+**Always follow the designs in `/designs/PlanMyTrip.html`.** Open it in a browser to see the screens and components.
+
+All mobile UI work must use tokens from `mobile/theme.ts` — never hardcode colors, font sizes, radii, or spacing. The token names map directly to the design's CSS variables:
+
+| Token file | What it covers |
+|---|---|
+| `colors.*` | Backgrounds, text, borders, accent, semantic (danger/success/warn), dark mode |
+| `typography.*` | `fontSans`, `fontMono`, size scale (xs–4xl), weights |
+| `radii.*` | `card` (18), `row` (14), `chip` (999/pill), sm/md/lg/xl |
+| `spacing.*` | xs (4) through 2xl (24) |
+
+When adding a new screen or component:
+1. Check `/designs/PlanMyTrip.html` first — if the design exists, match it exactly.
+2. Use `theme.ts` tokens for all style values.
+3. If the design doesn't cover it, stay consistent with the existing token vocabulary (don't introduce new hardcoded values).
 
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
