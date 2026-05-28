@@ -109,7 +109,7 @@
     "population": 15388000,
     "globalRank": 7,
     "usRank": null,
-    "image": null
+    "image": "lagos"
   },
   {
     "_id": "gn-1566083",
@@ -429,7 +429,7 @@
     "population": 9236032,
     "globalRank": 27,
     "usRank": null,
-    "image": null
+    "image": "hangzhou"
   },
   {
     "_id": "gn-1811103",
@@ -445,7 +445,7 @@
     "population": 9042509,
     "globalRank": 28,
     "usRank": null,
-    "image": null
+    "image": "foshan"
   },
   {
     "_id": "gn-2643743",
@@ -461,7 +461,7 @@
     "population": 8961989,
     "globalRank": 29,
     "usRank": null,
-    "image": null
+    "image": "london"
   },
   {
     "_id": "gn-5128581",
@@ -477,7 +477,7 @@
     "population": 8804190,
     "globalRank": 30,
     "usRank": 1,
-    "image": null
+    "image": "new-york-city"
   },
   {
     "_id": "gn-1642911",
@@ -493,7 +493,7 @@
     "population": 8540121,
     "globalRank": 31,
     "usRank": null,
-    "image": null
+    "image": "jakarta"
   },
   {
     "_id": "gn-1277333",
@@ -509,7 +509,7 @@
     "population": 8495492,
     "globalRank": 32,
     "usRank": null,
-    "image": null
+    "image": "bengaluru"
   },
   {
     "_id": "gn-1581130",
@@ -525,7 +525,7 @@
     "population": 8053663,
     "globalRank": 33,
     "usRank": null,
-    "image": null
+    "image": "hanoi"
   },
   {
     "_id": "gn-1668341",
@@ -541,7 +541,7 @@
     "population": 7871900,
     "globalRank": 34,
     "usRank": null,
-    "image": null
+    "image": "taipei"
   },
   {
     "_id": "gn-3936456",
@@ -557,7 +557,7 @@
     "population": 7737002,
     "globalRank": 35,
     "usRank": null,
-    "image": null
+    "image": "lima"
   },
   {
     "_id": "gn-3688689",
@@ -813,7 +813,7 @@
     "population": 5557233,
     "globalRank": 51,
     "usRank": null,
-    "image": null
+    "image": "sydney"
   },
   {
     "_id": "gn-160263",
@@ -829,7 +829,7 @@
     "population": 5383728,
     "globalRank": 52,
     "usRank": null,
-    "image": null
+    "image": "dar-es-salaam"
   },
   {
     "_id": "gn-498817",
@@ -845,7 +845,7 @@
     "population": 5351935,
     "globalRank": 53,
     "usRank": null,
-    "image": null
+    "image": "saint-petersburg"
   },
   {
     "_id": "gn-2158177",
@@ -861,7 +861,7 @@
     "population": 5350705,
     "globalRank": 54,
     "usRank": null,
-    "image": null
+    "image": "melbourne"
   },
   {
     "_id": "gn-361058",
@@ -877,7 +877,7 @@
     "population": 5263542,
     "globalRank": 55,
     "usRank": null,
-    "image": null
+    "image": "alexandria"
   },
   {
     "_id": "gn-2037013",
@@ -893,7 +893,7 @@
     "population": 5242897,
     "globalRank": 56,
     "usRank": null,
-    "image": null
+    "image": "harbin"
   },
   {
     "_id": "gn-1609350",
@@ -909,7 +909,7 @@
     "population": 5104476,
     "globalRank": 57,
     "usRank": null,
-    "image": null
+    "image": "bangkok"
   },
   {
     "_id": "gn-1808722",
@@ -925,7 +925,7 @@
     "population": 5050000,
     "globalRank": 58,
     "usRank": null,
-    "image": null
+    "image": "hefei"
   },
   {
     "_id": "gn-1814087",
@@ -941,7 +941,7 @@
     "population": 4913879,
     "globalRank": 59,
     "usRank": null,
-    "image": null
+    "image": "dalian"
   },
   {
     "_id": "gn-2335204",
@@ -973,7 +973,7 @@
     "population": 4837295,
     "globalRank": 61,
     "usRank": null,
-    "image": null
+    "image": "santiago"
   },
   {
     "_id": "gn-3369157",
@@ -989,7 +989,7 @@
     "population": 4772846,
     "globalRank": 62,
     "usRank": null,
-    "image": null
+    "image": "cape-town"
   },
   {
     "_id": "gn-1168197",
@@ -1005,7 +1005,7 @@
     "population": 4758762,
     "globalRank": 63,
     "usRank": null,
-    "image": null
+    "image": "peshawar"
   },
   {
     "_id": "gn-2038180",
@@ -1021,7 +1021,7 @@
     "population": 4714996,
     "globalRank": 64,
     "usRank": null,
-    "image": null
+    "image": "changchun"
   },
   {
     "_id": "gn-105343",
@@ -1037,7 +1037,7 @@
     "population": 4697000,
     "globalRank": 65,
     "usRank": null,
-    "image": null
+    "image": "jeddah"
   },
   {
     "_id": "gn-1264527",
@@ -1053,7 +1053,7 @@
     "population": 4681087,
     "globalRank": 66,
     "usRank": null,
-    "image": null
+    "image": "chennai"
   },
   {
     "_id": "gn-1275004",
@@ -1069,7 +1069,7 @@
     "population": 4631392,
     "globalRank": 67,
     "usRank": null,
-    "image": null
+    "image": "kolkata"
   },
   {
     "_id": "gn-1790645",
@@ -1085,7 +1085,7 @@
     "population": 4617251,
     "globalRank": 68,
     "usRank": null,
-    "image": null
+    "image": "xiamen"
   },
   {
     "_id": "gn-1255364",
@@ -1117,7 +1117,7 @@
     "population": 4477638,
     "globalRank": 70,
     "usRank": null,
-    "image": null
+    "image": "yangon"
   },
   {
     "_id": "gn-13308620",
@@ -1149,7 +1149,7 @@
     "population": 4434550,
     "globalRank": 72,
     "usRank": null,
-    "image": null
+    "image": "kabul"
   },
   {
     "_id": "gn-184745",
@@ -1165,7 +1165,7 @@
     "population": 4397073,
     "globalRank": 73,
     "usRank": null,
-    "image": null
+    "image": "nairobi"
   },
   {
     "_id": "gn-1790923",
@@ -1181,7 +1181,7 @@
     "population": 4396835,
     "globalRank": 74,
     "usRank": null,
-    "image": null
+    "image": "wuxi"
   },
   {
     "_id": "gn-360995",
@@ -3549,7 +3549,7 @@
     "population": 1921275,
     "globalRank": 222,
     "usRank": null,
-    "image": "hyderabad"
+    "image": null
   },
   {
     "_id": "gn-276781",
@@ -4477,7 +4477,7 @@
     "population": 1647642,
     "globalRank": 280,
     "usRank": null,
-    "image": "suzhou"
+    "image": null
   },
   {
     "_id": "gn-3529612",

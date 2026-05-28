@@ -47,8 +47,8 @@ FALLBACK_ARTICLES = {
     "other":      "Santorini",
 }
 
-# How many top-ranked destinations get a bundled photo
-IMAGE_CUTOFF = 100
+# How many top-ranked city destinations get a bundled photo
+IMAGE_CUTOFF = 6000  # effectively "all" — covers all 5827 destinations
 
 # ─── Curated tourist attractions (non-city destinations) ─────────────────────
 # These supplement the GeoNames city data with famous natural/historical sites.
@@ -408,8 +408,8 @@ def download_images():
         time.sleep(2)  # respectful delay between fallback downloads
 
     # --- Destination images ---
-    to_download = [d for d in destinations if d["globalRank"] <= IMAGE_CUTOFF]
-    print(f"\nDownloading images for top {len(to_download)} destinations...")
+    to_download = [d for d in destinations if d["globalRank"] <= IMAGE_CUTOFF or d["type"] != "city"]
+    print(f"\nDownloading images for {len(to_download)} destinations (top {IMAGE_CUTOFF} cities + all non-city attractions)...")
 
     ok_count = 0
     for i, dest in enumerate(to_download, 1):
@@ -436,6 +436,11 @@ def download_images():
 
         if i % 25 == 0:
             print(f"  {i}/{len(to_download)} processed, {ok_count} downloaded")
+            # Incremental save so a kill doesn't lose all progress
+            for dest in destinations:
+                if "image" not in dest:
+                    dest["image"] = None
+            WITH_IMAGES_DATA.write_text(json.dumps(destinations, ensure_ascii=False, indent=2))
         time.sleep(1.5)  # respectful delay; Wikipedia rate-limits aggressive scrapers
 
     for dest in destinations:
