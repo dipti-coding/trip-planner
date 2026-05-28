@@ -148,6 +148,25 @@ Branch: `feature/jwt-auth` — PR #21
 - [x] `tests/conftest.py` — `client` fixture overrides `get_current_user` so all existing route tests pass without auth headers
 - [x] Verified in iOS Simulator: trip list loads without 401 errors
 
+### AWS Deployment — ECS Fargate + RDS + ALB + Route53 (2026-05-27)
+Branch: `feature/aws-deployment` — PR #22
+
+- [x] `infra/networking.tf` — VPC (10.0.0.0/16), 2 public subnets (ECS), 2 private subnets (RDS), IGW, route table, security groups for ALB / ECS / RDS
+- [x] `infra/database.tf` — RDS PostgreSQL 16 `db.t4g.micro` 20 GB gp3 in private subnets, `random_password` resource, Secrets Manager secrets for `db_password` and assembled `DATABASE_URL`
+- [x] `infra/secrets.tf` — Secrets Manager shells for `jwt-secret-key`, `auth-user-email`, `auth-user-password-hash` (values set manually post-apply)
+- [x] `infra/ecr.tf` — ECR repository with scan-on-push and 10-image lifecycle policy
+- [x] `infra/ecs.tf` — ECS cluster, IAM execution role (ECR + CloudWatch + Secrets Manager), task definition injecting all secrets as env vars, Fargate service (1 task, public subnet, public IP — no NAT Gateway)
+- [x] `infra/alb.tf` — ALB, target group (health check `/ping`), HTTP→HTTPS redirect listener, HTTPS listener
+- [x] `infra/dns.tf` — ACM certificate with DNS validation, Route53 CNAME validation records, Route53 A alias → ALB
+- [x] `infra/outputs.tf` — `api_url`, `ecr_repository_url`, `alb_dns_name`
+- [x] `infra/main.tf` — added `random` provider; `infra/variables.tf` fully filled out
+- [x] `Dockerfile` CMD updated: `alembic upgrade head && uvicorn ...` — schema applied automatically on first deploy
+- [x] `alembic/env.py` — fixed to pass `DATABASE_URL` directly to `create_engine` (bypasses configparser which choked on `%` in RDS password)
+- [x] Terraform installed at `~/bin/terraform` (v1.9.8); `Justfile` PATH updated; `just tf-init / tf-plan / tf-apply / ecr-push / deploy` recipes added
+- [x] Deployed: `https://api.example.com/ping` live, `POST /auth/token` returns JWT, `POST /trips` and `GET /trips` verified
+- [x] `DEV_README.md` — Authentication section added with working curl examples; create-trip curl updated with real response
+- [x] Hardcoded credentials removed: `mobile/api/auth.ts` reads `TEST_EMAIL`/`TEST_PWD` from react-native-config; `tests/test_auth.py` reads `AUTH_USER_PWD` from env; `mobile/env.d.ts` and both `.env.example` files updated
+
 ## Week 3 — Weather + PDF Export
 _Not started_
 
