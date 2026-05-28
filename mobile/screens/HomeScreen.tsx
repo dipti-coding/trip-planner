@@ -131,7 +131,7 @@ function StepIndicator({total, current}: {total: number; current: number}) {
   return (
     <View style={styles.stepRow}>
       {Array.from({length: total}).map((_, i) => (
-        <View key={i} style={[styles.stepDot, i <= current && styles.stepDotActive]} />
+        <View key={i} style={[styles.stepBar, i <= current && styles.stepBarActive]} />
       ))}
     </View>
   );
@@ -284,7 +284,7 @@ function AddTripWizard({
     setCreating(true);
     try {
       const res = await client.post<Trip>('/trips', {
-        user_id: '00000000-0000-0000-0000-000000000001',
+        user_id: '96a84b90-d7d7-4f6a-8691-d084deda8991',
         name: tripName.trim() || defaultName,
         destination_city: dests.map(d => d.city).join(', '),
         start_date: startDate ?? new Date().toISOString().slice(0, 10),
@@ -301,9 +301,10 @@ function AddTripWizard({
 
   const filteredDests = POPULAR_DESTINATIONS.filter(
     d =>
-      !destSearch ||
-      d.city.toLowerCase().includes(destSearch.toLowerCase()) ||
-      d.country.toLowerCase().includes(destSearch.toLowerCase()),
+      !dests.some(s => s.city === d.city) &&
+      (!destSearch ||
+        d.city.toLowerCase().includes(destSearch.toLowerCase()) ||
+        d.country.toLowerCase().includes(destSearch.toLowerCase())),
   );
 
   const stepIndex = step === 'destination' ? 0 : step === 'dates' ? 1 : 2;
@@ -318,150 +319,164 @@ function AddTripWizard({
           {/* Nav bar */}
           <View style={styles.wizardNav}>
             {step === 'destination' ? (
-              <TouchableOpacity onPress={handleClose} style={styles.wizardNavBtn}>
-                <Text style={styles.wizardNavBtnText}>✕</Text>
+              <TouchableOpacity onPress={handleClose} style={styles.wizardCloseBtn}>
+                <Icon name="x" size={14} color={colors.textPrimary} stroke={2.5}/>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity
                 onPress={() => setStep(step === 'confirm' ? 'dates' : 'destination')}
-                style={styles.wizardNavBtn}>
-                <Text style={styles.wizardNavBtnText}>‹ Back</Text>
+                style={styles.wizardNavBackBtn}>
+                <Icon name="chev-left" size={18} color={colors.textPrimary} stroke={2}/>
+                <Text style={styles.wizardNavBackBtnText}>Back</Text>
               </TouchableOpacity>
             )}
             <StepIndicator total={3} current={stepIndex} />
-            <View style={styles.wizardNavBtn} />
+            <View style={styles.wizardNavSpacer} />
           </View>
 
           {/* Step content */}
           {step === 'destination' && (
             <KeyboardAvoidingView
-              style={styles.wizardContent}
+              style={{flex: 1}}
               behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-              <Text style={styles.wizardTitle}>Where to?</Text>
-              <Text style={styles.wizardSub}>Add one or more destinations.</Text>
+              <ScrollView
+                style={{flex: 1}}
+                contentContainerStyle={styles.wizardScrollContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}>
+                <Text style={styles.wizardTitle}>Where to?</Text>
+                <Text style={styles.wizardSub}>Add one or more destinations.</Text>
 
-              {/* Selected chips */}
-              {dests.length > 0 && (
-                <View style={styles.destChips}>
-                  {dests.map((d, i) => (
-                    <View key={d.city} style={styles.destChip}>
-                      <LinearGradient
-                        colors={coverGradient(d.city)}
-                        style={styles.destChipThumb}
-                      />
-                      <Text style={styles.destChipText}>
-                        Stop {i + 1} · {d.city}
-                      </Text>
-                      <TouchableOpacity onPress={() => toggleDest(d)}>
-                        <Text style={styles.destChipRemove}>×</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-              )}
-
-              <View style={styles.searchWrap}>
-                <Text style={styles.searchIcon}>🔍</Text>
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder={dests.length > 0 ? 'Add another stop' : 'City, country or region'}
-                  placeholderTextColor={colors.textTertiary}
-                  value={destSearch}
-                  onChangeText={setDestSearch}
-                />
-              </View>
-
-              <Text style={styles.sectionLabel}>POPULAR THIS SEASON</Text>
-              <FlatList
-                data={filteredDests}
-                keyExtractor={d => d.city}
-                style={styles.destList}
-                renderItem={({item}) => {
-                  const selected = dests.some(d => d.city === item.city);
-                  return (
-                    <TouchableOpacity
-                      style={styles.destRow}
-                      onPress={() => toggleDest(item)}
-                      activeOpacity={0.7}>
-                      <LinearGradient
-                        colors={coverGradient(item.city)}
-                        style={styles.destThumb}
-                      />
-                      <View style={styles.destInfo}>
-                        <Text style={styles.destCity}>{item.city}</Text>
-                        <Text style={styles.destCountry}>{item.country}</Text>
+                {/* Selected chips */}
+                {dests.length > 0 && (
+                  <View style={styles.destChips}>
+                    {dests.map((d, i) => (
+                      <View key={d.city} style={styles.destChip}>
+                        <LinearGradient
+                          colors={coverGradient(d.city)}
+                          style={styles.destChipThumb}
+                        />
+                        <Text style={styles.destChipText}>
+                          Stop {i + 1} · {d.city}
+                        </Text>
+                        <TouchableOpacity onPress={() => toggleDest(d)} style={styles.destChipRemoveBtn}>
+                          <Icon name="x" size={14} color={colors.textTertiary} stroke={2}/>
+                        </TouchableOpacity>
                       </View>
-                      <Text style={[styles.destAdd, selected && styles.destAdded]}>
-                        {selected ? '✓' : '+'}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                }}
-              />
+                    ))}
+                  </View>
+                )}
 
-              <TouchableOpacity
-                style={[styles.primaryBtn, dests.length === 0 && styles.primaryBtnDisabled]}
-                onPress={() => setStep('dates')}
-                disabled={dests.length === 0}>
-                <Text style={styles.primaryBtnText}>Continue</Text>
-              </TouchableOpacity>
+                <View style={styles.destSearchWrap}>
+                  <Icon name="search" size={16} color={colors.textTertiary}/>
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder={dests.length > 0 ? 'Add another stop' : 'City, country or region'}
+                    placeholderTextColor={colors.textTertiary}
+                    value={destSearch}
+                    onChangeText={setDestSearch}
+                  />
+                </View>
+
+                <Text style={styles.sectionLabel}>POPULAR THIS SEASON</Text>
+                {filteredDests.map(item => (
+                  <TouchableOpacity
+                    key={item.city}
+                    style={styles.destRow}
+                    onPress={() => toggleDest(item)}
+                    activeOpacity={0.7}>
+                    <LinearGradient
+                      colors={coverGradient(item.city)}
+                      style={styles.destThumb}
+                    />
+                    <View style={styles.destInfo}>
+                      <Text style={styles.destCity}>{item.city}</Text>
+                      <Text style={styles.destCountry}>{item.country}</Text>
+                    </View>
+                    <Icon name="plus" size={18} color={colors.accent}/>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <View style={styles.wizardFooter}>
+                <TouchableOpacity
+                  style={[styles.primaryBtn, dests.length === 0 && styles.primaryBtnDisabled]}
+                  onPress={() => setStep('dates')}
+                  disabled={dests.length === 0}>
+                  <Text style={styles.primaryBtnText}>Continue</Text>
+                </TouchableOpacity>
+              </View>
             </KeyboardAvoidingView>
           )}
 
           {step === 'dates' && (
-            <View style={styles.wizardContent}>
-              <Text style={styles.wizardTitle}>When?</Text>
-              <Text style={styles.wizardSub}>Tap a start date, then an end date.</Text>
-              <CalendarPicker onRange={(s, e) => { setStartDate(s); setEndDate(e); }} />
-              <TouchableOpacity
-                style={[styles.primaryBtn, (!startDate || !endDate) && styles.primaryBtnDisabled]}
-                onPress={() => setStep('confirm')}
-                disabled={!startDate || !endDate}>
-                <Text style={styles.primaryBtnText}>Continue</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setStep('confirm')} style={styles.skipBtn}>
-                <Text style={styles.skipBtnText}>Skip dates</Text>
-              </TouchableOpacity>
+            <View style={{flex: 1}}>
+              <ScrollView
+                style={{flex: 1}}
+                contentContainerStyle={styles.wizardScrollContent}
+                showsVerticalScrollIndicator={false}>
+                <Text style={styles.wizardTitle}>When?</Text>
+                <Text style={styles.wizardSub}>Tap a start date, then an end date.</Text>
+                <CalendarPicker onRange={(s, e) => { setStartDate(s); setEndDate(e); }} />
+              </ScrollView>
+              <View style={styles.wizardFooter}>
+                <TouchableOpacity
+                  style={[styles.primaryBtn, (!startDate || !endDate) && styles.primaryBtnDisabled]}
+                  onPress={() => setStep('confirm')}
+                  disabled={!startDate || !endDate}>
+                  <Text style={styles.primaryBtnText}>Continue</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setStep('confirm')} style={styles.skipBtn}>
+                  <Text style={styles.skipBtnText}>Skip dates</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
 
           {step === 'confirm' && (
-            <View style={styles.wizardContent}>
-              <Text style={styles.wizardTitle}>Looks good?</Text>
-              <Text style={styles.wizardSub}>We'll create an empty trip. You can add plans next.</Text>
-              <View style={styles.confirmCard}>
-                <Text style={styles.confirmLabel}>DESTINATIONS</Text>
-                {dests.map((d, i) => (
-                  <Text key={d.city} style={styles.confirmValue}>
-                    {i + 1}. {d.city}, {d.country}
+            <View style={{flex: 1}}>
+              <ScrollView
+                style={{flex: 1}}
+                contentContainerStyle={styles.wizardScrollContent}
+                showsVerticalScrollIndicator={false}>
+                <Text style={styles.wizardTitle}>Looks good?</Text>
+                <Text style={styles.wizardSub}>We'll create an empty trip. You can add plans next.</Text>
+                <View style={styles.confirmCard}>
+                  <Text style={styles.confirmLabel}>DESTINATIONS</Text>
+                  {dests.map((d, i) => (
+                    <Text key={d.city} style={styles.confirmValue}>
+                      {i + 1}.{'  '}<Text style={styles.confirmValueBold}>{d.city},</Text>{'  '}{d.country}
+                    </Text>
+                  ))}
+                  <View style={styles.confirmDivider} />
+                  <Text style={styles.confirmLabel}>DATES</Text>
+                  <Text style={styles.confirmValue}>
+                    {startDate && endDate
+                      ? `${fmtShort(startDate)} – ${fmtShort(endDate)} · ${dayCount(startDate, endDate)} days`
+                      : 'No dates yet — add them later'}
                   </Text>
-                ))}
-                <View style={styles.confirmDivider} />
-                <Text style={styles.confirmLabel}>DATES</Text>
-                <Text style={styles.confirmValue}>
-                  {startDate && endDate
-                    ? `${fmtShort(startDate)} – ${fmtShort(endDate)}`
-                    : 'No dates yet — add them later'}
-                </Text>
+                </View>
+                <Text style={styles.fieldLabel}>Trip name (optional)</Text>
+                <TextInput
+                  style={styles.nameInput}
+                  placeholder={defaultName}
+                  placeholderTextColor={colors.textTertiary}
+                  value={tripName}
+                  onChangeText={setTripName}
+                />
+              </ScrollView>
+              <View style={styles.wizardFooter}>
+                <TouchableOpacity
+                  style={[styles.primaryBtn, creating && styles.primaryBtnDisabled]}
+                  onPress={handleCreate}
+                  disabled={creating}>
+                  {creating ? (
+                    <ActivityIndicator color={colors.surface} />
+                  ) : (
+                    <Text style={styles.primaryBtnText}>Create trip</Text>
+                  )}
+                </TouchableOpacity>
               </View>
-              <Text style={styles.fieldLabel}>Trip name (optional)</Text>
-              <TextInput
-                style={styles.nameInput}
-                placeholder={defaultName}
-                placeholderTextColor={colors.textTertiary}
-                value={tripName}
-                onChangeText={setTripName}
-              />
-              <TouchableOpacity
-                style={[styles.primaryBtn, creating && styles.primaryBtnDisabled]}
-                onPress={handleCreate}
-                disabled={creating}>
-                {creating ? (
-                  <ActivityIndicator color={colors.surface} />
-                ) : (
-                  <Text style={styles.primaryBtnText}>Create trip</Text>
-                )}
-              </TouchableOpacity>
             </View>
           )}
         </Pressable>
@@ -541,7 +556,7 @@ export default function HomeScreen({navigation}: Props) {
       </View>
 
       <View style={styles.searchWrap}>
-        <Text style={styles.searchIcon}>🔍</Text>
+        <Icon name="search" size={16} color={colors.textTertiary}/>
         <TextInput
           style={styles.searchInput}
           placeholder="Search trips, places, plans"
@@ -626,7 +641,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 20, marginBottom: 20,
     paddingHorizontal: spacing.lg, paddingVertical: 10, gap: spacing.md,
   },
-  searchIcon: {fontSize: typography.lg},
   searchInput: {flex: 1, fontSize: typography.md, color: colors.textPrimary},
 
   section: {paddingHorizontal: 20, marginBottom: spacing['2xl']},
@@ -715,10 +729,11 @@ const styles = StyleSheet.create({
   // ── Add Trip Wizard ─────────────────────────────────────────────────────────
   wizardOverlay: {flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)'},
   wizardSheet: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.bgBase,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '90%',
+    flex: 1,
   },
   sheetHandle: {
     width: 36, height: 4, borderRadius: 2,
@@ -726,22 +741,35 @@ const styles = StyleSheet.create({
     alignSelf: 'center', marginTop: 12, marginBottom: 4,
   },
   wizardNav: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: spacing.xl, paddingVertical: spacing.md,
   },
+  wizardCloseBtn: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: colors.bgBase3,
+    alignItems: 'center', justifyContent: 'center',
+  },
   wizardNavBtn: {minWidth: 56},
-  wizardNavBtnText: {fontSize: typography.md, color: colors.accent},
-  stepRow: {flexDirection: 'row', gap: 6, alignItems: 'center'},
-  stepDot: {width: 6, height: 6, borderRadius: 3, backgroundColor: colors.border},
-  stepDotActive: {width: 24, height: 6, borderRadius: 3, backgroundColor: colors.accent},
+  wizardNavBtnText: {fontSize: typography.base, fontWeight: typography.medium, color: colors.accent},
+  wizardNavBackBtn: {flexDirection: 'row', alignItems: 'center', gap: 2, minWidth: 56},
+  wizardNavBackBtnText: {fontSize: typography.base, fontWeight: typography.medium, color: colors.textPrimary},
+  wizardNavSpacer: {minWidth: 56},
+  stepRow: {flex: 1, flexDirection: 'row', gap: 4, marginHorizontal: spacing.lg},
+  stepBar: {flex: 1, height: 3, borderRadius: 2, backgroundColor: colors.bgBase3},
+  stepBarActive: {backgroundColor: colors.accent},
 
-  wizardContent: {paddingHorizontal: spacing.xl, paddingBottom: 40},
+  wizardScrollContent: {paddingHorizontal: spacing.xl, paddingBottom: spacing.xl},
+  wizardFooter: {
+    paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing['2xl'],
+    backgroundColor: colors.bgBase,
+  },
   wizardTitle: {
     fontSize: typography['3xl'],
     fontWeight: typography.bold,
     color: colors.textPrimary,
     letterSpacing: -0.3,
     marginBottom: 4,
+    marginTop: spacing.md,
   },
   wizardSub: {
     fontSize: typography.base,
@@ -753,26 +781,32 @@ const styles = StyleSheet.create({
   destChips: {marginBottom: spacing.lg, gap: spacing.sm},
   destChip: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: colors.bgBase, borderRadius: radii.row,
+    backgroundColor: colors.surface, borderRadius: radii.row,
     padding: spacing.md,
-    borderWidth: 1, borderColor: colors.border,
+    borderWidth: 1, borderColor: colors.borderStrong,
   },
   destChipThumb: {width: 28, height: 28, borderRadius: radii.md},
   destChipText: {flex: 1, fontSize: typography.base, color: colors.textPrimary},
-  destChipRemove: {fontSize: typography.xl, color: colors.textTertiary, paddingHorizontal: 4},
-  destList: {maxHeight: 280, marginBottom: spacing.xl},
+  destChipRemoveBtn: {padding: spacing.xs},
+  destSearchWrap: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.surface, borderRadius: radii.xl,
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.lg, paddingVertical: 10, gap: spacing.md,
+    borderWidth: 1, borderColor: colors.border,
+  },
   destRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
+    paddingVertical: spacing.md, paddingHorizontal: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radii.row,
+    borderWidth: 1, borderColor: colors.borderStrong,
+    marginBottom: spacing.sm,
   },
   destThumb: {width: 44, height: 44, borderRadius: radii.lg},
   destInfo: {flex: 1},
   destCity: {fontSize: typography.base, fontWeight: typography.medium, color: colors.textPrimary},
   destCountry: {fontSize: typography.bodySmall, color: colors.textSecondary},
-  destAdd: {fontSize: typography.xl, color: colors.accent, fontWeight: typography.light, width: 24, textAlign: 'center'},
-  destAdded: {color: colors.success},
-
   // Dates step
   calMonth: {marginBottom: spacing.xl},
   calMonthLabel: {
@@ -795,10 +829,10 @@ const styles = StyleSheet.create({
 
   // Confirm step
   confirmCard: {
-    backgroundColor: colors.bgBase,
+    backgroundColor: colors.surface,
     borderRadius: radii.xl,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderStrong,
     padding: spacing.xl,
     marginBottom: spacing.xl,
     gap: spacing.sm,
@@ -812,12 +846,14 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   confirmValue: {fontSize: typography.base, color: colors.textPrimary},
+  confirmValueBold: {fontWeight: typography.semibold, color: colors.textPrimary},
   confirmDivider: {height: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginVertical: spacing.sm},
   fieldLabel: {fontSize: typography.bodySmall, color: colors.textSecondary, marginBottom: spacing.sm},
   nameInput: {
-    borderWidth: 1, borderColor: colors.border, borderRadius: radii.xl,
-    padding: spacing.lg, fontSize: typography.base, color: colors.textPrimary,
-    backgroundColor: colors.bgBase, marginBottom: spacing.xl,
+    borderBottomWidth: 1, borderBottomColor: colors.border,
+    paddingVertical: spacing.md,
+    fontSize: typography.base, color: colors.textPrimary,
+    marginBottom: spacing.xl,
   },
 
   // Shared buttons
