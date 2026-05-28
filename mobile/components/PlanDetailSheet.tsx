@@ -10,9 +10,10 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {TYPE_META, DEFAULT_META} from '../assets/planTypes';
+import Icon from './Icon';
 import type {Plan} from '../types';
 import {fmtTime, fmtDuration} from '../utils/dates';
-import {colors, coverGradient, radii, spacing, typography} from '../theme';
+import {colors, radii, spacing, typography} from '../theme';
 
 type Props = {
   plan: Plan | null;
@@ -23,7 +24,7 @@ type Props = {
 function DetailRow({icon, label, value}: {icon: string; label: string; value: string}) {
   return (
     <View style={styles.detailRow}>
-      <Text style={styles.detailIcon}>{icon}</Text>
+      <Icon name={icon} size={18} color={colors.textSecondary}/>
       <Text style={styles.detailLabel}>{label}</Text>
       <Text style={styles.detailValue}>{value}</Text>
     </View>
@@ -33,9 +34,9 @@ function DetailRow({icon, label, value}: {icon: string; label: string; value: st
 function LinkRow({icon, label, url}: {icon: string; label: string; url: string}) {
   return (
     <TouchableOpacity style={styles.linkRow} onPress={() => Linking.openURL(url)} activeOpacity={0.7}>
-      <Text style={styles.detailIcon}>{icon}</Text>
+      <Icon name={icon} size={18} color={colors.textSecondary}/>
       <Text style={styles.linkLabel}>{label}</Text>
-      <Text style={styles.linkArrow}>↗</Text>
+      <Icon name="arrow-up-right" size={16} color={colors.textTertiary}/>
     </TouchableOpacity>
   );
 }
@@ -46,7 +47,6 @@ export default function PlanDetailSheet({plan, onClose, onDelete}: Props) {
   const meta = TYPE_META[plan.type] ?? DEFAULT_META;
   const time = fmtTime(plan.start_datetime);
   const dur = fmtDuration(plan.start_datetime, plan.end_datetime);
-  const heroGradient = coverGradient(plan.title);
 
   const d = plan.details ?? {};
   const address = d.address as string | undefined;
@@ -71,7 +71,7 @@ export default function PlanDetailSheet({plan, onClose, onDelete}: Props) {
               />
               {/* Close button */}
               <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-                <Text style={styles.closeBtnText}>×</Text>
+                <Icon name="x" size={18} color={colors.surface} stroke={2}/>
               </TouchableOpacity>
               {/* Type badge */}
               <View style={styles.typeBadge}>
@@ -93,7 +93,8 @@ export default function PlanDetailSheet({plan, onClose, onDelete}: Props) {
                   style={styles.actionPrimary}
                   onPress={() => Linking.openURL(`maps://?q=${encodeURIComponent(address)}`)}
                   activeOpacity={0.8}>
-                  <Text style={styles.actionPrimaryText}>🧭 Directions</Text>
+                  <Icon name="map-pin" size={16} color={colors.surface}/>
+                  <Text style={styles.actionPrimaryText}>Directions</Text>
                 </TouchableOpacity>
               )}
               {phone && (
@@ -101,7 +102,8 @@ export default function PlanDetailSheet({plan, onClose, onDelete}: Props) {
                   style={styles.actionSecondary}
                   onPress={() => Linking.openURL(`tel:${phone}`)}
                   activeOpacity={0.8}>
-                  <Text style={styles.actionSecondaryText}>📞 Call</Text>
+                  <Icon name="share" size={16} color={colors.textPrimary}/>
+                  <Text style={styles.actionSecondaryText}>Call</Text>
                 </TouchableOpacity>
               )}
               {url && (
@@ -109,7 +111,8 @@ export default function PlanDetailSheet({plan, onClose, onDelete}: Props) {
                   style={styles.actionSecondary}
                   onPress={() => Linking.openURL(url)}
                   activeOpacity={0.8}>
-                  <Text style={styles.actionSecondaryText}>🌐 Site</Text>
+                  <Icon name="globe" size={16} color={colors.textPrimary}/>
+                  <Text style={styles.actionSecondaryText}>Site</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -117,17 +120,17 @@ export default function PlanDetailSheet({plan, onClose, onDelete}: Props) {
             {/* Detail rows */}
             {(address || hours || phone) && (
               <View style={styles.detailSection}>
-                {address && <DetailRow icon="📍" label="Address" value={address} />}
-                {hours && <DetailRow icon="🕐" label="Hours" value={hours} />}
-                {phone && <DetailRow icon="📞" label="Phone" value={phone} />}
+                {address && <DetailRow icon="map-pin" label="Address" value={address} />}
+                {hours && <DetailRow icon="clock" label="Hours" value={hours} />}
+                {phone && <DetailRow icon="share" label="Phone" value={phone} />}
               </View>
             )}
 
             {/* Link rows */}
             <View style={styles.linkSection}>
-              {url && <LinkRow icon="🌐" label={url.replace(/^https?:\/\//, '')} url={url} />}
+              {url && <LinkRow icon="globe" label={url.replace(/^https?:\/\//, '')} url={url} />}
               <LinkRow
-                icon="📅"
+                icon="calendar"
                 label="Add to calendar"
                 url={`calshow:${new Date(plan.start_datetime ?? '').getTime() / 1000}`}
               />
@@ -136,13 +139,15 @@ export default function PlanDetailSheet({plan, onClose, onDelete}: Props) {
             {/* Bottom actions */}
             <View style={styles.bottomActions}>
               <TouchableOpacity style={styles.editBtn} activeOpacity={0.7}>
-                <Text style={styles.editBtnText}>✏  Edit</Text>
+                <Icon name="edit" size={16} color={colors.textPrimary}/>
+                <Text style={styles.editBtnText}>Edit</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.removeBtn}
                 onPress={() => { onDelete(plan.id); onClose(); }}
                 activeOpacity={0.7}>
-                <Text style={styles.removeBtnText}>✕  Remove</Text>
+                <Icon name="x" size={16} color={colors.danger}/>
+                <Text style={styles.removeBtnText}>Remove</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -177,7 +182,6 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     zIndex: 2,
   },
-  closeBtnText: {fontSize: 20, color: colors.surface, lineHeight: 24},
   typeBadge: {
     position: 'absolute', top: 16, right: 16,
     backgroundColor: 'rgba(255,255,255,0.25)',
@@ -203,6 +207,7 @@ const styles = StyleSheet.create({
     flex: 1, backgroundColor: colors.accent,
     borderRadius: radii.md, paddingVertical: 10,
     alignItems: 'center', justifyContent: 'center',
+    flexDirection: 'row', gap: spacing.sm,
   },
   actionPrimaryText: {fontSize: typography.base, color: colors.surface, fontWeight: typography.medium},
   actionSecondary: {
@@ -210,6 +215,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1, borderColor: colors.border,
     alignItems: 'center', justifyContent: 'center',
+    flexDirection: 'row', gap: spacing.sm,
   },
   actionSecondaryText: {fontSize: typography.base, color: colors.textPrimary},
 
@@ -225,7 +231,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
     gap: spacing.lg,
   },
-  detailIcon: {fontSize: typography.lg, width: 22},
   detailLabel: {
     flex: 1, fontSize: typography.base,
     color: colors.textSecondary,
@@ -246,7 +251,6 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   linkLabel: {flex: 1, fontSize: typography.base, color: colors.textPrimary},
-  linkArrow: {fontSize: typography.base, color: colors.textTertiary},
 
   // Bottom actions
   bottomActions: {
@@ -259,11 +263,13 @@ const styles = StyleSheet.create({
     flex: 1, paddingVertical: spacing.xl,
     alignItems: 'center', justifyContent: 'center',
     borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: colors.border,
+    flexDirection: 'row', gap: spacing.sm,
   },
   editBtnText: {fontSize: typography.base, color: colors.textPrimary},
   removeBtn: {
     flex: 1, paddingVertical: spacing.xl,
     alignItems: 'center', justifyContent: 'center',
+    flexDirection: 'row', gap: spacing.sm,
   },
   removeBtnText: {fontSize: typography.base, color: colors.danger},
 });

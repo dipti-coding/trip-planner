@@ -2,8 +2,8 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {RouteProp} from '@react-navigation/native';
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {
-  Alert,
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Linking,
   NativeScrollEvent,
@@ -20,8 +20,10 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import {launchImageLibrary} from 'react-native-image-picker';
 import client from '../api/client';
+import Icon from '../components/Icon';
 import PlanCard from '../components/PlanCard';
 import PlanDetailSheet from '../components/PlanDetailSheet';
+import {PlaneSpinner} from '../components/Spinner';
 import type {Plan, Trip} from '../types';
 import {dateRange, fmtDow, fmtDayLabel, fmtDayNum, fmtShort, fmtTime, fmtDuration} from '../utils/dates';
 import type {RootStackParamList} from '../App';
@@ -38,10 +40,10 @@ type AddStep = null | 'picker' | 'paste' | 'manual';
 
 const PLAN_TYPES = ['Flight', 'Stay', 'Eat', 'Do'] as const;
 const PLAN_TYPE_ICONS: Record<string, string> = {
-  Flight: '✈',
-  Stay: '🛏',
-  Eat: '🍴',
-  Do: '📍',
+  Flight: 'plane',
+  Stay:   'hotel',
+  Eat:    'fork',
+  Do:     'map-pin',
 };
 
 const SAMPLE_BOOKING = `Your booking confirmation – Air France
@@ -51,10 +53,10 @@ Passenger: John Smith
 Seat: 24A`;
 
 const DETECT_TYPES = [
-  {icon: '✈', label: 'Flight', sub: 'Flight numbers, IATA codes, gate'},
-  {icon: '🛏', label: 'Stay', sub: 'Check-in / out, room type'},
-  {icon: '📍', label: 'Activity', sub: 'Reservation, tickets, time slot'},
-  {icon: '🍴', label: 'Food', sub: 'Restaurant, party size, OpenTable'},
+  {icon: 'plane',   label: 'Flight',   sub: 'Flight numbers, IATA codes, gate'},
+  {icon: 'hotel',   label: 'Stay',     sub: 'Check-in / out, room type'},
+  {icon: 'map-pin', label: 'Activity', sub: 'Reservation, tickets, time slot'},
+  {icon: 'fork',    label: 'Food',     sub: 'Restaurant, party size, OpenTable'},
 ];
 
 function DayPill({date, active, onPress, weatherIcon, tempF}: {
@@ -327,7 +329,7 @@ function AddPlanOverlay({
 
             <TouchableOpacity style={styles.choiceCard} onPress={() => setAddStep('paste')} activeOpacity={0.8}>
               <View style={[styles.choiceIcon, {backgroundColor: colors.accent}]}>
-                <Text style={styles.choiceIconText}>📄</Text>
+                <Icon name="doc" size={22} color={colors.surface}/>
               </View>
               <View style={styles.choiceText}>
                 <Text style={styles.choiceTitle}>Paste a booking</Text>
@@ -342,7 +344,7 @@ function AddPlanOverlay({
 
             <TouchableOpacity style={styles.choiceCard} onPress={() => setAddStep('manual')} activeOpacity={0.8}>
               <View style={[styles.choiceIcon, {backgroundColor: colors.textSecondary}]}>
-                <Text style={styles.choiceIconText}>✏</Text>
+                <Icon name="edit" size={22} color={colors.surface}/>
               </View>
               <View style={styles.choiceText}>
                 <Text style={styles.choiceTitle}>Enter manually</Text>
@@ -359,7 +361,7 @@ function AddPlanOverlay({
                   style={styles.typeBtn}
                   onPress={() => { setManualType(t); setAddStep('manual'); }}
                   activeOpacity={0.7}>
-                  <Text style={styles.typeBtnIcon}>{PLAN_TYPE_ICONS[t]}</Text>
+                  <Icon name={PLAN_TYPE_ICONS[t]} size={22} color={colors.textSecondary}/>
                   <Text style={styles.typeBtnLabel}>{t}</Text>
                 </TouchableOpacity>
               ))}
@@ -405,7 +407,7 @@ function AddPlanOverlay({
               <Text style={styles.detectSectionLabel}>WHAT WE DETECT</Text>
               {DETECT_TYPES.map(dt => (
                 <View key={dt.label} style={styles.detectRow}>
-                  <Text style={styles.detectIcon}>{dt.icon}</Text>
+                  <Icon name={dt.icon} size={20} color={colors.textSecondary}/>
                   <View>
                     <Text style={styles.detectLabel}>{dt.label}</Text>
                     <Text style={styles.detectSub}>{dt.sub}</Text>
@@ -427,7 +429,7 @@ function AddPlanOverlay({
                   style={[styles.typeBtn, manualType === t && styles.typeBtnActive]}
                   onPress={() => setManualType(t)}
                   activeOpacity={0.7}>
-                  <Text style={styles.typeBtnIcon}>{PLAN_TYPE_ICONS[t]}</Text>
+                  <Icon name={PLAN_TYPE_ICONS[t]} size={22} color={manualType === t ? colors.accent : colors.textSecondary}/>
                   <Text style={[styles.typeBtnLabel, manualType === t && styles.typeBtnLabelActive]}>{t}</Text>
                 </TouchableOpacity>
               ))}
@@ -526,7 +528,7 @@ export default function TripDetailScreen({navigation, route}: Props) {
   if (loading) {
     return (
       <SafeAreaView style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.accent} />
+        <PlaneSpinner label="Loading trip…"/>
       </SafeAreaView>
     );
   }
@@ -551,7 +553,7 @@ export default function TripDetailScreen({navigation, route}: Props) {
         <SafeAreaView>
           <View style={styles.navRow}>
             <TouchableOpacity style={styles.glassBtn} onPress={() => navigation.goBack()}>
-              <Text style={styles.glassBtnText}>‹</Text>
+              <Icon name="chev-left" size={20} color={colors.surface} stroke={2}/>
             </TouchableOpacity>
             {scrolled && (
               <Text style={styles.navTitle} numberOfLines={1}>
@@ -559,7 +561,10 @@ export default function TripDetailScreen({navigation, route}: Props) {
               </Text>
             )}
             <TouchableOpacity style={styles.glassBtnWide}>
-              <Text style={styles.glassBtnWideText}>📄 PDF</Text>
+              <View style={{flexDirection:'row', alignItems:'center', gap: 5}}>
+                <Icon name="doc" size={14} color={colors.surface}/>
+                <Text style={styles.glassBtnWideText}>PDF</Text>
+              </View>
             </TouchableOpacity>
           </View>
 
@@ -639,7 +644,7 @@ export default function TripDetailScreen({navigation, route}: Props) {
       {/* Circular FAB */}
       {!addingPlan && (
         <TouchableOpacity style={styles.fab} onPress={() => setAddingPlan(true)} activeOpacity={0.85}>
-          <Text style={styles.fabText}>+</Text>
+          <Icon name="plus" size={24} color={colors.surface}/>
         </TouchableOpacity>
       )}
 
@@ -688,7 +693,6 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.4)',
   },
-  glassBtnText: {fontSize: 24, color: colors.surface, lineHeight: 32, marginTop: -2},
   navTitle: {
     flex: 1, fontSize: typography.md, fontWeight: typography.semibold, color: colors.surface,
     textAlign: 'center', letterSpacing: -0.1,
@@ -897,7 +901,6 @@ const styles = StyleSheet.create({
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.4, shadowRadius: 8, elevation: 8,
   },
-  fabText: {fontSize: typography['2xl'], color: colors.surface, fontWeight: typography.light, lineHeight: 30},
 
   // Error
   errorText: {fontSize: typography.md, color: colors.danger, textAlign: 'center'},
@@ -968,7 +971,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   typeBtnActive: {borderColor: colors.accent, backgroundColor: 'rgba(15,98,254,0.06)'},
-  typeBtnIcon: {fontSize: typography.xl},
   typeBtnLabel: {fontSize: typography.bodySmall, color: colors.textSecondary},
   typeBtnLabelActive: {color: colors.accent, fontWeight: typography.semibold},
 
@@ -1002,7 +1004,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
   },
-  detectIcon: {fontSize: typography.xl, width: 24},
   detectLabel: {fontSize: typography.base, fontWeight: typography.medium, color: colors.textPrimary},
   detectSub: {fontSize: typography.bodySmall, color: colors.textSecondary},
 

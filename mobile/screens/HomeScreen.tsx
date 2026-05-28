@@ -19,6 +19,8 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import client from '../api/client';
+import Icon from '../components/Icon';
+import {CitySilhouette} from '../components/CityCovers';
 import type {Trip} from '../types';
 import {dayCount, fmtShort, tripStatus} from '../utils/dates';
 import type {RootStackParamList} from '../App';
@@ -85,6 +87,7 @@ function TripCard({trip, onPress}: {trip: TripWithStatus; onPress: () => void}) 
     <TouchableOpacity style={styles.tripCard} onPress={onPress} activeOpacity={0.85}>
       <View style={styles.cover}>
         <LinearGradient colors={gradient} style={StyleSheet.absoluteFill} />
+        <CitySilhouette city={trip.destination_city} />
         <LinearGradient colors={scrim} locations={[0, 0.4, 0.6, 1]} style={StyleSheet.absoluteFill} />
         <View style={styles.coverTop}>
           <View style={styles.coverTitleBlock}>
@@ -104,8 +107,8 @@ function TripCard({trip, onPress}: {trip: TripWithStatus; onPress: () => void}) 
         </View>
       </View>
       <View style={styles.cardBottom}>
-        <Text style={styles.metaText}>🗓 {days} days</Text>
-        <Text style={styles.metaText}>📍 0 plans</Text>
+        <View style={styles.metaItem}><Icon name="calendar" size={13} color={colors.textSecondary}/><Text style={styles.metaText}>{days} days</Text></View>
+        <View style={styles.metaItem}><Icon name="map-pin" size={13} color={colors.textSecondary}/><Text style={styles.metaText}>0 plans</Text></View>
         <View style={styles.progressWrap}>
           <View style={styles.progressTrack}>
             <View style={[styles.progressBar, {width: '0%'}]} />
@@ -693,6 +696,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingTop: 10, paddingBottom: 10,
     gap: spacing.lg,
   },
+  metaItem: {flexDirection: 'row', alignItems: 'center', gap: spacing.xs},
   metaText: {fontSize: typography.bodySmall, color: colors.textSecondary},
   progressWrap: {marginLeft: 'auto', alignItems: 'flex-end', gap: 3},
   progressTrack: {
