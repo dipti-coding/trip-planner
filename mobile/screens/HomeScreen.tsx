@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -26,6 +27,12 @@ import type {Trip} from '../types';
 import {dayCount, fmtShort, tripStatus} from '../utils/dates';
 import type {RootStackParamList} from '../App';
 import {colors, coverGradient, radii, spacing, typography} from '../theme';
+import {
+  findDestination,
+  getDestinationImage,
+  searchDestinations,
+} from '../utils/destinations';
+import type {Destination} from '../utils/destinations';
 
 type Props = {
   navigation: CompositeNavigationProp<
@@ -37,17 +44,6 @@ type Props = {
 type TripStatus = 'current' | 'future' | 'past';
 type TripWithStatus = Trip & {status: TripStatus};
 
-// Popular destinations shown in the Add Trip wizard
-const POPULAR_DESTINATIONS = [
-  {city: 'Lisbon', country: 'Portugal'},
-  {city: 'Kyoto', country: 'Japan'},
-  {city: 'Barcelona', country: 'Spain'},
-  {city: 'Cinque Terre', country: 'Italy'},
-  {city: 'Porto', country: 'Portugal'},
-  {city: 'Amalfi Coast', country: 'Italy'},
-  {city: 'Oaxaca', country: 'Mexico'},
-  {city: 'Copenhagen', country: 'Denmark'},
-];
 
 function daysSince(startDate: string): number {
   const start = new Date(startDate);
@@ -82,13 +78,20 @@ function StatusBadge({trip}: {trip: TripWithStatus}) {
 
 function TripCard({trip, onPress}: {trip: TripWithStatus; onPress: () => void}) {
   const days = dayCount(trip.start_date, trip.end_date);
-  const gradient = coverGradient(trip.destination_city);
   const scrim: string[] = ['rgba(0,0,0,0.55)', 'rgba(0,0,0,0.15)', 'rgba(0,0,0,0.15)', 'rgba(0,0,0,0.7)'];
+  const dest = findDestination(trip.destination_city);
+  const photo = getDestinationImage(dest);
   return (
     <TouchableOpacity style={styles.tripCard} onPress={onPress} activeOpacity={0.85}>
       <View style={styles.cover}>
-        <LinearGradient colors={gradient} style={StyleSheet.absoluteFill} />
-        <CitySilhouette city={trip.destination_city} />
+        {photo ? (
+          <Image source={photo} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        ) : (
+          <>
+            <LinearGradient colors={coverGradient(trip.destination_city)} style={StyleSheet.absoluteFill} />
+            <CitySilhouette city={trip.destination_city} />
+          </>
+        )}
         <LinearGradient colors={scrim} locations={[0, 0.4, 0.6, 1]} style={StyleSheet.absoluteFill} />
         <View style={styles.coverTop}>
           <View style={styles.coverTitleBlock}>
@@ -125,7 +128,7 @@ function TripCard({trip, onPress}: {trip: TripWithStatus; onPress: () => void}) 
 
 type AddTripStep = 'destination' | 'dates' | 'confirm';
 
-type SelectedDest = {city: string; country: string};
+type SelectedDest = {city: string; country: string; dest: Destination | null};
 
 function StepIndicator({total, current}: {total: number; current: number}) {
   return (
@@ -299,12 +302,9 @@ function AddTripWizard({
     }
   }
 
-  const filteredDests = POPULAR_DESTINATIONS.filter(
-    d =>
-      !dests.some(s => s.city === d.city) &&
-      (!destSearch ||
-        d.city.toLowerCase().includes(destSearch.toLowerCase()) ||
-        d.country.toLowerCase().includes(destSearch.toLowerCase())),
+  const searchResults = useMemo(
+    () => searchDestinations(destSearch, 20),
+    [destSearch],
   );
 
   const stepIndex = step === 'destination' ? 0 : step === 'dates' ? 1 : 2;
@@ -350,20 +350,27 @@ function AddTripWizard({
                 {/* Selected chips */}
                 {dests.length > 0 && (
                   <View style={styles.destChips}>
-                    {dests.map((d, i) => (
-                      <View key={d.city} style={styles.destChip}>
-                        <LinearGradient
-                          colors={coverGradient(d.city)}
-                          style={styles.destChipThumb}
-                        />
-                        <Text style={styles.destChipText}>
-                          Stop {i + 1} · {d.city}
-                        </Text>
-                        <TouchableOpacity onPress={() => toggleDest(d)} style={styles.destChipRemoveBtn}>
-                          <Icon name="x" size={14} color={colors.textTertiary} stroke={2}/>
-                        </TouchableOpacity>
-                      </View>
-                    ))}
+                    {dests.map((d, i) => {
+                      const chipPhoto = getDestinationImage(d.dest);
+                      return (
+                        <View key={d.city} style={styles.destChip}>
+                          {chipPhoto ? (
+                            <Image source={chipPhoto} style={styles.destChipThumb} resizeMode="cover" />
+                          ) : (
+                            <LinearGradient
+                              colors={coverGradient(d.city)}
+                              style={styles.destChipThumb}
+                            />
+                          )}
+                          <Text style={styles.destChipText}>
+                            Stop {i + 1} · {d.city}
+                          </Text>
+                          <TouchableOpacity onPress={() => toggleDest(d)} style={styles.destChipRemoveBtn}>
+                            <Icon name="x" size={14} color={colors.textTertiary} stroke={2}/>
+                          </TouchableOpacity>
+                        </View>
+                      );
+                    })}
                   </View>
                 )}
 
@@ -378,24 +385,55 @@ function AddTripWizard({
                   />
                 </View>
 
-                <Text style={styles.sectionLabel}>POPULAR THIS SEASON</Text>
-                {filteredDests.map(item => (
+                <Text style={styles.sectionLabel}>
+                  {destSearch.trim() ? 'RESULTS' : 'TOP DESTINATIONS'}
+                </Text>
+                {searchResults.map(item => {
+                  const selected = dests.some(d => d.city === item.name);
+                  const rowPhoto = getDestinationImage(item);
+                  return (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={styles.destRow}
+                      onPress={() =>
+                        toggleDest({city: item.name, country: item.country, dest: item})
+                      }
+                      activeOpacity={0.7}>
+                      {rowPhoto ? (
+                        <Image source={rowPhoto} style={styles.destThumb} resizeMode="cover" />
+                      ) : (
+                        <LinearGradient
+                          colors={coverGradient(item.name)}
+                          style={styles.destThumb}
+                        />
+                      )}
+                      <View style={styles.destInfo}>
+                        <Text style={styles.destCity}>{item.name}</Text>
+                        <Text style={styles.destCountry}>{item.country}</Text>
+                      </View>
+                      {selected ? (
+                        <Icon name="check" size={18} color={colors.success}/>
+                      ) : (
+                        <Icon name="plus" size={18} color={colors.accent}/>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+                {destSearch.trim().length > 0 && (
                   <TouchableOpacity
-                    key={item.city}
                     style={styles.destRow}
-                    onPress={() => toggleDest(item)}
+                    onPress={() =>
+                      toggleDest({city: destSearch.trim(), country: '', dest: null})
+                    }
                     activeOpacity={0.7}>
-                    <LinearGradient
-                      colors={coverGradient(item.city)}
-                      style={styles.destThumb}
-                    />
+                    <View style={[styles.destThumb, styles.destThumbCustom]} />
                     <View style={styles.destInfo}>
-                      <Text style={styles.destCity}>{item.city}</Text>
-                      <Text style={styles.destCountry}>{item.country}</Text>
+                      <Text style={styles.destCity}>Use "{destSearch.trim()}"</Text>
+                      <Text style={styles.destCountry}>Custom location</Text>
                     </View>
                     <Icon name="plus" size={18} color={colors.accent}/>
                   </TouchableOpacity>
-                ))}
+                )}
               </ScrollView>
 
               <View style={styles.wizardFooter}>
@@ -445,7 +483,9 @@ function AddTripWizard({
                   <Text style={styles.confirmLabel}>DESTINATIONS</Text>
                   {dests.map((d, i) => (
                     <Text key={d.city} style={styles.confirmValue}>
-                      {i + 1}.{'  '}<Text style={styles.confirmValueBold}>{d.city},</Text>{'  '}{d.country}
+                      {i + 1}.{'  '}
+                      <Text style={styles.confirmValueBold}>{d.city}</Text>
+                      {d.country ? `  ${d.country}` : ''}
                     </Text>
                   ))}
                   <View style={styles.confirmDivider} />
@@ -804,6 +844,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   destThumb: {width: 44, height: 44, borderRadius: radii.lg},
+  destThumbCustom: {backgroundColor: colors.bgBase3},
   destInfo: {flex: 1},
   destCity: {fontSize: typography.base, fontWeight: typography.medium, color: colors.textPrimary},
   destCountry: {fontSize: typography.bodySmall, color: colors.textSecondary},
