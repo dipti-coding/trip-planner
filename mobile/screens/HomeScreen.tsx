@@ -281,7 +281,7 @@ function AddTripWizard({
     });
   }
 
-  const defaultName = dests.length > 0 ? `${dests[0].city} trip` : 'My trip';
+  const defaultName = dests.length > 0 ? `${dests[0].city}` : 'My trip';
 
   async function handleCreate() {
     setCreating(true);
@@ -540,6 +540,14 @@ export default function HomeScreen({navigation}: Props) {
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    return navigation.addListener('focus', () => {
+      client.get<Trip[]>('/trips')
+        .then(r => setTrips(r.data))
+        .catch(() => {});
+    });
+  }, [navigation]);
 
   const sections = useMemo(() => {
     const q = query.toLowerCase();
