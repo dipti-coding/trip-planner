@@ -123,6 +123,41 @@ just ios 3   # boots whichever model is at position 3 in ios-list
 
 ---
 
+## Authentication
+
+All API routes (except `/ping`) require a Bearer token. Get one with:
+
+```bash
+curl -s -X POST http://localhost:8000/auth/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "username=<test_email>&password=<test_password>"
+```
+
+Expected response:
+
+```json
+{
+    "access_token": "<jwt>",
+    "token_type": "bearer"
+}
+```
+
+Pass the token in subsequent requests:
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8000/auth/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "username=<test_email>&password=<test_password>" \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+
+curl -s https://api.example.com/trips \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+```
+
+Credentials come from `AUTH_USER_EMAIL` and `AUTH_USER_PASSWORD_HASH` in `.env`. See `.env.example` for how to generate a new hash.
+
+---
+
 ## Verify End-to-End with Ping
 
 ```bash
@@ -245,21 +280,32 @@ These endpoints let you create trips and plans manually. Run `just dev` and `jus
 **Get a user ID from the seeded data:**
 
 ```bash
-curl -s http://localhost:8000/trips | python3 -c "import sys,json; t=json.load(sys.stdin); print(t[0]['user_id'])"
+curl -s https://api.example.com/trips | python3 -c "import sys,json; t=json.load(sys.stdin); print(t[0]['user_id'])"
 ```
 
 ### Create a trip
 
 ```bash
-curl -s -X POST http://localhost:8000/trips \
+curl -s -X POST https://api.example.com/trips \
   -H "Content-Type: application/json" \
-  -d '{
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"user_id":"96a84b90-d7d7-4f6a-8691-d084deda8991","name":"Hawaii Fall 2026","destination_city":"Maui, Hawaii","start_date":"2026-10-01","end_date":"2026-10-08"}' \
+  | python3 -m json.tool
+```
+
+Expected response:
+
+```json
+{
+    "id": "568631ca-2789-42f5-ae30-192a54747bdc",
     "user_id": "96a84b90-d7d7-4f6a-8691-d084deda8991",
     "name": "Hawaii Fall 2026",
     "destination_city": "Maui, Hawaii",
     "start_date": "2026-10-01",
-    "end_date": "2026-10-08"
-  }' | python3 -m json.tool
+    "end_date": "2026-10-08",
+    "created_at": "2026-05-28T00:37:55.900813Z",
+    "updated_at": "2026-05-28T00:37:55.900813Z"
+}
 ```
 
 Copy the `id` from the response — you'll use it as `<trip_id>` below.

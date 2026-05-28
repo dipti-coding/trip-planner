@@ -5,6 +5,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
+    }
   }
 }
 
@@ -12,13 +16,20 @@ provider "aws" {
   region = var.aws_region
 }
 
-# Aurora PostgreSQL cluster — provisioned in Week 4
-# resource "aws_rds_cluster" "trip_planner" {
-#   cluster_identifier      = "trip-planner"
-#   engine                  = "aurora-postgresql"
-#   engine_version          = "16.2"
-#   master_username         = var.db_username
-#   master_password         = var.db_password
-#   skip_final_snapshot     = false
-#   final_snapshot_identifier = "trip-planner-final"
-# }
+# ── Data ─────────────────────────────────────────────────────────────────────
+
+data "aws_availability_zones" "available" {
+  state = "available"
+}
+
+data "aws_route53_zone" "main" {
+  name         = "${var.domain_name}."
+  private_zone = false
+}
+
+# ── Locals ────────────────────────────────────────────────────────────────────
+
+locals {
+  api_fqdn = "${var.api_subdomain}.${var.domain_name}"
+  azs      = slice(data.aws_availability_zones.available.names, 0, 2)
+}
