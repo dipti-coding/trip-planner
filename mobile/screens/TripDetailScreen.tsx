@@ -25,17 +25,16 @@ import PlanCard from '../components/PlanCard';
 import PlanDetailSheet from '../components/PlanDetailSheet';
 import {PlaneSpinner} from '../components/Spinner';
 import type {Plan, Trip} from '../types';
-import {dateRange, fmtDow, fmtDayLabel, fmtDayNum, fmtShort, fmtTime, fmtDuration} from '../utils/dates';
+import {dateRange, fmtDow, fmtDayLabel, fmtDayNum, fmtShort, fmtTime} from '../utils/dates';
 import type {RootStackParamList} from '../App';
 import {colors, coverGradient, radii, spacing, typography} from '../theme';
-import {TYPE_META, DEFAULT_META} from '../assets/planTypes';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'TripDetail'>;
   route: RouteProp<RootStackParamList, 'TripDetail'>;
 };
 
-type ViewMode = 'timeline' | 'plans' | 'itinerary';
+type ViewMode = 'plans' | 'itinerary';
 type AddStep = null | 'picker' | 'paste' | 'manual';
 
 const PLAN_TYPES = ['Flight', 'Stay', 'Eat', 'Do'] as const;
@@ -128,76 +127,6 @@ function DayView({date, plans, onSelectPlan}: {
   );
 }
 
-const START_HOUR = 6;
-const END_HOUR = 22;
-const HOUR_HEIGHT = 64;
-const LABEL_WIDTH = 36;
-const HOURS = Array.from({length: END_HOUR - START_HOUR}, (_, i) => START_HOUR + i);
-
-function getMinutesFromMidnight(iso: string): number {
-  const d = new Date(iso);
-  return d.getHours() * 60 + d.getMinutes();
-}
-
-function TimelineView({date, plans, onSelectPlan}: {
-  date: string;
-  plans: Plan[];
-  onSelectPlan: (plan: Plan) => void;
-}) {
-  const dayPlans = plans.filter(p => p.start_datetime?.slice(0, 10) === date && p.start_datetime);
-  const gridHeight = (END_HOUR - START_HOUR) * HOUR_HEIGHT;
-
-  return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-      <DayHeader date={date} plans={dayPlans} />
-      <View style={{height: gridHeight, position: 'relative', marginTop: spacing.md}}>
-        {HOURS.map(h => (
-          <View
-            key={h}
-            style={{
-              position: 'absolute',
-              top: (h - START_HOUR) * HOUR_HEIGHT,
-              left: 0, right: 0,
-              flexDirection: 'row',
-              alignItems: 'flex-start',
-            }}>
-            <Text style={styles.timelineHourLabel}>
-              {h === 12 ? '12p' : h > 12 ? `${h - 12}p` : `${h}a`}
-            </Text>
-            <View style={styles.timelineGridLine} />
-          </View>
-        ))}
-        {dayPlans.map(p => {
-          const startMin = getMinutesFromMidnight(p.start_datetime!);
-          const endMin = p.end_datetime ? getMinutesFromMidnight(p.end_datetime) : startMin + 60;
-          const top = (startMin - START_HOUR * 60) / 60 * HOUR_HEIGHT;
-          const height = Math.max((endMin - startMin) / 60 * HOUR_HEIGHT, 44);
-          const meta = TYPE_META[p.type] ?? DEFAULT_META;
-          const dur = fmtDuration(p.start_datetime, p.end_datetime);
-          return (
-            <TouchableOpacity
-              key={p.id}
-              onPress={() => onSelectPlan(p)}
-              activeOpacity={0.8}
-              style={[styles.timelineBlock, {
-                top,
-                height,
-                left: LABEL_WIDTH + 8,
-                right: spacing.xl,
-                backgroundColor: meta.color + '1E',
-                borderLeftColor: meta.color,
-              }]}>
-              <Text style={[styles.timelineBlockTime, {color: meta.color}]}>
-                {fmtTime(p.start_datetime)}{dur ? ` · ${dur}` : ''}
-              </Text>
-              <Text style={styles.timelineBlockTitle} numberOfLines={2}>{p.title}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-    </ScrollView>
-  );
-}
 
 function ItineraryView({trip, plans, days}: {
   trip: Trip;
@@ -580,17 +509,28 @@ export default function TripDetailScreen({navigation, route}: Props) {
 
           {/* Segmented tabs */}
           <View style={styles.segRow}>
-            {(['timeline', 'plans', 'itinerary'] as ViewMode[]).map(mode => (
-              <TouchableOpacity
-                key={mode}
-                style={[styles.segBtn, viewMode === mode && styles.segBtnActive]}
-                onPress={() => setViewMode(mode)}
-                activeOpacity={0.8}>
-                <Text style={[styles.segBtnText, viewMode === mode && styles.segBtnTextActive]}>
-                  {mode.charAt(0).toUpperCase() + mode.slice(1)}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {([
+              {mode: 'plans'     as ViewMode, label: 'Daily Plans', icon: 'calendar'},
+              {mode: 'itinerary' as ViewMode, label: 'Itinerary',   icon: 'doc'},
+            ]).map(({mode, label, icon}) => {
+              const active = viewMode === mode;
+              return (
+                <TouchableOpacity
+                  key={mode}
+                  style={[styles.segBtn, active && styles.segBtnActive]}
+                  onPress={() => setViewMode(mode)}
+                  activeOpacity={0.8}>
+                  <Icon
+                    name={icon}
+                    size={14}
+                    color={active ? colors.accent : 'rgba(255,255,255,0.75)'}
+                  />
+                  <Text style={[styles.segBtnText, active && styles.segBtnTextActive]}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
           {/* Day strip — hidden in itinerary mode */}
@@ -630,14 +570,7 @@ export default function TripDetailScreen({navigation, route}: Props) {
           />
         </ScrollView>
       )}
-      {viewMode === 'timeline' && (
-        <TimelineView
-          date={activeDate}
-          plans={dayPlans}
-          onSelectPlan={setSelectedPlan}
-        />
-      )}
-      {viewMode === 'itinerary' && (
+{viewMode === 'itinerary' && (
         <ItineraryView trip={trip} plans={plans} days={days} />
       )}
 
@@ -725,21 +658,29 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginTop: spacing.xs,
     marginBottom: 10,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderRadius: radii.lg,
-    padding: 3,
-    gap: 0,
+    backgroundColor: 'rgba(0,0,0,0.22)',
+    borderRadius: radii.xl,
+    padding: 4,
   },
   segBtn: {
-    flex: 1, paddingVertical: spacing.sm,
-    alignItems: 'center', borderRadius: radii.md,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: radii.lg,
+    gap: spacing.sm,
   },
   segBtnActive: {
     backgroundColor: colors.surface,
-    shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.14,
+    shadowRadius: 8,
+    shadowOffset: {width: 0, height: 2},
+    elevation: 3,
   },
-  segBtnText: {fontSize: typography.bodySmall, fontWeight: typography.medium, color: 'rgba(255,255,255,0.8)'},
-  segBtnTextActive: {color: colors.textPrimary, fontWeight: typography.semibold},
+  segBtnText: {fontSize: typography.bodySmall, fontWeight: typography.semibold, color: 'rgba(255,255,255,0.72)'},
+  segBtnTextActive: {color: colors.textPrimary},
 
   // Day strip
   dayStripScroll: {flexShrink: 0},
@@ -790,39 +731,6 @@ const styles = StyleSheet.create({
     padding: spacing['2xl'], alignItems: 'center',
   },
   emptyDayText: {fontSize: typography.base, color: colors.textTertiary},
-
-  // Timeline view
-  timelineHourLabel: {
-    width: LABEL_WIDTH,
-    fontSize: typography.xs,
-    color: colors.textTertiary,
-    paddingTop: 0,
-    textAlign: 'right',
-    paddingRight: spacing.md,
-  },
-  timelineGridLine: {
-    flex: 1,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.border,
-    marginTop: 7,
-  },
-  timelineBlock: {
-    position: 'absolute',
-    borderLeftWidth: 3,
-    borderRadius: radii.md,
-    padding: spacing.sm,
-    overflow: 'hidden',
-  },
-  timelineBlockTime: {
-    fontSize: typography.xs,
-    fontWeight: typography.semibold,
-    marginBottom: 2,
-  },
-  timelineBlockTitle: {
-    fontSize: typography.bodySmall,
-    color: colors.textPrimary,
-    fontWeight: typography.medium,
-  },
 
   // Itinerary view
   itinContent: {paddingBottom: 100, gap: spacing.xl},
