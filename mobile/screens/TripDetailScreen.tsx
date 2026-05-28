@@ -46,6 +46,13 @@ const PLAN_TYPE_ICONS: Record<string, string> = {
   Eat:    'fork',
   Do:     'map-pin',
 };
+// Maps display labels to backend PlanType enum values
+const PLAN_TYPE_API: Record<string, string> = {
+  Flight: 'Flight',
+  Stay:   'Hotel',
+  Eat:    'Restaurant',
+  Do:     'Activity',
+};
 
 const SAMPLE_BOOKING = `Your booking confirmation – Air France
 Booking reference: AF-X42T9Q
@@ -190,9 +197,31 @@ function AddPlanOverlay({
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
-  const [manualType, setManualType] = useState<string>('Activity');
+  const [manualType, setManualType] = useState<string>('Flight');
+  const [manualTitle, setManualTitle] = useState('');
   const [manualDate, setManualDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const canSave = addStep === 'manual' && manualTitle.trim().length > 0;
+
+  async function handleSave() {
+    if (!canSave) return;
+    setSubmitting(true);
+    try {
+      await client.post(`/trips/${tripId}/plans`, {
+        type: PLAN_TYPE_API[manualType] ?? manualType,
+        title: manualTitle.trim(),
+        start_datetime: manualDate ? manualDate.toISOString() : null,
+      });
+      const res = await client.get<Plan[]>(`/trips/${tripId}/plans`);
+      onAdded(res.data);
+      onClose();
+    } catch {
+      Alert.alert('Error', 'Could not save plan. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   async function handleDetect() {
     if (addStep === 'paste' && !rawText.trim() && !imageUri) return;
@@ -243,7 +272,7 @@ function AddPlanOverlay({
       <View style={[styles.addNavBar, {paddingTop: insets.top + spacing.sm}]}>
         {addStep === 'picker' ? (
           <TouchableOpacity onPress={onClose} style={styles.addNavBtn}>
-            <Text style={styles.addNavBtnText}>Cancel</Text>
+            <Text style={styles.addNavCancelText}>Cancel</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity onPress={() => setAddStep('picker')} style={styles.addNavBackBtn}>
@@ -254,7 +283,15 @@ function AddPlanOverlay({
         <Text style={styles.addNavTitle}>
           {addStep === 'picker' ? 'New plan' : addStep === 'paste' ? 'Paste booking' : 'Enter manually'}
         </Text>
-        <View style={styles.addNavBtn} />
+        <TouchableOpacity
+          style={styles.addNavBtn}
+          onPress={handleSave}
+          disabled={!canSave}>
+          {submitting
+            ? <ActivityIndicator size="small" color={colors.accent}/>
+            : <Text style={[styles.addNavSaveText, !canSave && styles.addNavSaveDisabled]}>Save</Text>
+          }
+        </TouchableOpacity>
       </View>
 
       <ScrollView keyboardShouldPersistTaps="handled">
@@ -374,6 +411,9 @@ function AddPlanOverlay({
               style={styles.manualInput}
               placeholder="Plan name"
               placeholderTextColor={colors.textTertiary}
+              value={manualTitle}
+              onChangeText={setManualTitle}
+              autoFocus
             />
             <Text style={styles.fieldLabel}>DATE & TIME</Text>
             <TouchableOpacity
@@ -402,9 +442,6 @@ function AddPlanOverlay({
                 style={styles.datePickerNative}
               />
             )}
-            <TouchableOpacity style={[styles.detectBtn, styles.detectBtnDisabled]}>
-              <Text style={styles.detectBtnText}>Save plan</Text>
-            </TouchableOpacity>
           </View>
         )}
       </ScrollView>
@@ -855,9 +892,12 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     backgroundColor: colors.surface,
   },
-  addNavBtn: {minWidth: 64},
+  addNavBtn: {minWidth: 64, alignItems: 'flex-end'},
   addNavBackBtn: {flexDirection: 'row', alignItems: 'center', gap: 2, minWidth: 64},
+  addNavCancelText: {fontSize: typography.base, fontWeight: typography.medium, color: colors.accent},
   addNavBtnText: {fontSize: typography.base, fontWeight: typography.medium, color: colors.textPrimary},
+  addNavSaveText: {fontSize: typography.base, fontWeight: typography.semibold, color: colors.accent},
+  addNavSaveDisabled: {color: colors.textTertiary},
   addNavTitle: {
     fontSize: typography.base, fontWeight: typography.semibold, color: colors.textPrimary,
   },
