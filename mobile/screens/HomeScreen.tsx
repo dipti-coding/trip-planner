@@ -281,7 +281,7 @@ function AddTripWizard({
     });
   }
 
-  const defaultName = dests.length > 0 ? `${dests[0].city} trip` : 'My trip';
+  const defaultName = dests.length > 0 ? `${dests[0].city}` : 'My trip';
 
   async function handleCreate() {
     setCreating(true);
