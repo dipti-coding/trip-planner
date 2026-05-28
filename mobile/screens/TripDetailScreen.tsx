@@ -190,10 +190,14 @@ function ItineraryView({trip, plans, days}: {
 
 function AddPlanOverlay({
   tripId,
+  trip,
+  defaultDate,
   onClose,
   onAdded,
 }: {
   tripId: string;
+  trip: Trip;
+  defaultDate: string;
   onClose: () => void;
   onAdded: (plans: Plan[]) => void;
 }) {
@@ -205,8 +209,15 @@ function AddPlanOverlay({
   const [parseError, setParseError] = useState<string | null>(null);
   const [manualType, setManualType] = useState<string>('Flight');
   const [manualTitle, setManualTitle] = useState('');
-  const [manualDate, setManualDate] = useState<Date | null>(null);
+  // Default to noon on the active day
+  const [manualDate, setManualDate] = useState<Date>(() => {
+    const d = new Date(defaultDate + 'T12:00:00');
+    return d;
+  });
   const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const minDate = new Date(trip.start_date + 'T00:00:00');
+  const maxDate = new Date(trip.end_date + 'T23:59:59');
 
   const canSave = addStep === 'manual' && manualTitle.trim().length > 0;
 
@@ -217,7 +228,7 @@ function AddPlanOverlay({
       await client.post(`/trips/${tripId}/plans`, {
         type: PLAN_TYPE_API[manualType] ?? manualType,
         title: manualTitle.trim(),
-        start_datetime: manualDate ? toLocalISO(manualDate) : null,
+        start_datetime: toLocalISO(manualDate),
       });
       const res = await client.get<Plan[]>(`/trips/${tripId}/plans`);
       onAdded(res.data);
@@ -426,21 +437,21 @@ function AddPlanOverlay({
               style={styles.datePickerRow}
               onPress={() => setShowDatePicker(v => !v)}
               activeOpacity={0.7}>
-              <Icon name="calendar" size={17} color={manualDate ? colors.textPrimary : colors.textTertiary}/>
-              <Text style={[styles.datePickerText, !manualDate && styles.datePickerPlaceholder]}>
-                {manualDate
-                  ? manualDate.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}) +
-                    '  ·  ' +
-                    manualDate.toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit'})
-                  : 'Select date & time'}
+              <Icon name="calendar" size={17} color={colors.textPrimary}/>
+              <Text style={styles.datePickerText}>
+                {manualDate.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}) +
+                  '  ·  ' +
+                  manualDate.toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit'})}
               </Text>
               <Icon name="chev-down" size={17} color={colors.textTertiary}/>
             </TouchableOpacity>
             {showDatePicker && (
               <DateTimePicker
-                value={manualDate ?? new Date()}
+                value={manualDate}
                 mode="datetime"
                 display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                minimumDate={minDate}
+                maximumDate={maxDate}
                 onChange={(_e, date) => {
                   if (date) { setManualDate(date); }
                   if (Platform.OS === 'android') { setShowDatePicker(false); }
@@ -655,6 +666,8 @@ export default function TripDetailScreen({navigation, route}: Props) {
       {addingPlan && (
         <AddPlanOverlay
           tripId={tripId}
+          trip={trip}
+          defaultDate={activeDate}
           onClose={() => setAddingPlan(false)}
           onAdded={updatedPlans => {
             setPlans(updatedPlans);
@@ -1006,7 +1019,6 @@ const styles = StyleSheet.create({
   datePickerText: {
     flex: 1, fontSize: typography.base, color: colors.textPrimary,
   },
-  datePickerPlaceholder: {color: colors.textTertiary},
   datePickerNative: {
     marginBottom: spacing.xl,
     // On iOS `inline` display is full-width; let it size itself naturally
