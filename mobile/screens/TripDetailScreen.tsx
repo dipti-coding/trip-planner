@@ -833,8 +833,8 @@ const styles = StyleSheet.create({
   },
   itinDayHeader: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
   },
   itinDayNum: {
     fontSize: typography.xs,
@@ -844,11 +844,11 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   itinDayDate: {
-    fontSize: typography['2xl'],
+    fontSize: typography.lg,
     fontWeight: typography.semibold,
     color: colors.surface,
-    marginTop: 2,
-    letterSpacing: -0.3,
+    marginTop: 1,
+    letterSpacing: -0.2,
   },
   itinPlanRow: {
     flexDirection: 'row',
