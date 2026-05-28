@@ -67,6 +67,12 @@ const DETECT_TYPES = [
   {icon: 'fork',    label: 'Food',     sub: 'Restaurant, party size, OpenTable'},
 ];
 
+/** Format a JS Date as a local-time ISO string (no UTC conversion). */
+function toLocalISO(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:00`;
+}
+
 function DayPill({date, active, onPress, weatherIcon, tempF}: {
   date: string;
   active: boolean;
@@ -211,7 +217,7 @@ function AddPlanOverlay({
       await client.post(`/trips/${tripId}/plans`, {
         type: PLAN_TYPE_API[manualType] ?? manualType,
         title: manualTitle.trim(),
-        start_datetime: manualDate ? manualDate.toISOString() : null,
+        start_datetime: manualDate ? toLocalISO(manualDate) : null,
       });
       const res = await client.get<Plan[]>(`/trips/${tripId}/plans`);
       onAdded(res.data);
