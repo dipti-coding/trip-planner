@@ -822,13 +822,18 @@ const styles = StyleSheet.create({
     borderRadius: radii.card,
     overflow: 'hidden',
     marginHorizontal: spacing.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
+    // Shadow instead of border — border + overflow:hidden + borderRadius
+    // leaves a 1-px inset ring that makes the gradient look like a rectangle
+    shadowColor: '#000',
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    shadowOffset: {width: 0, height: 2},
+    elevation: 2,
   },
   itinDayHeader: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing['2xl'],
   },
   itinDayNum: {
     fontSize: typography.xs,
