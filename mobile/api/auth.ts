@@ -1,8 +1,8 @@
 import axios from 'axios';
 import Config from 'react-native-config';
 
-const DEV_EMAIL = 'test@example.com';
-const DEV_PASSWORD = 'REDACTED';
+const DEV_EMAIL = Config.TEST_EMAIL;
+const DEV_PASSWORD = Config.TEST_PWD;
 
 let _token: string | null = null;
 
