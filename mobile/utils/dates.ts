@@ -27,6 +27,13 @@ export function fmtTime(iso: string | null): string {
   return d.toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit', hour12: true});
 }
 
+/** 24-hour compact time ("14:35") — used where column width is tight. */
+export function fmtTime24(iso: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso.slice(0, 19));
+  return d.toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit', hour12: false});
+}
+
 export function fmtDuration(start: string | null, end: string | null): string {
   if (!start || !end) return '';
   const ms = new Date(end).getTime() - new Date(start).getTime();

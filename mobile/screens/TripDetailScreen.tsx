@@ -27,7 +27,7 @@ import PlanCard from '../components/PlanCard';
 import PlanDetailSheet from '../components/PlanDetailSheet';
 import {PlaneSpinner} from '../components/Spinner';
 import type {Plan, Trip} from '../types';
-import {dateRange, fmtDow, fmtDayLabel, fmtDayNum, fmtShort, fmtTime} from '../utils/dates';
+import {dateRange, fmtDow, fmtDayLabel, fmtDayNum, fmtShort, fmtTime, fmtTime24} from '../utils/dates';
 import type {RootStackParamList} from '../App';
 import {colors, coverGradient, radii, spacing, typography} from '../theme';
 
@@ -161,14 +161,14 @@ function ItineraryView({trip, plans, days}: {
               <Text style={styles.itinDayNum}>
                 DAY {i + 1} · {fmtDayLabel(date).toUpperCase()}
               </Text>
-              <Text style={styles.itinDayDate}>{fmtDow(date)}</Text>
+              <Text style={styles.itinDayDate}>{fmtShort(date)}</Text>
             </LinearGradient>
             {dp.length === 0 ? (
               <Text style={styles.itinEmpty}>Nothing planned</Text>
             ) : (
               dp.map(p => (
                 <View key={p.id} style={styles.itinPlanRow}>
-                  <Text style={styles.itinTime}>{fmtTime(p.start_datetime)}</Text>
+                  <Text style={styles.itinTime}>{fmtTime24(p.start_datetime)}</Text>
                   <Text style={styles.itinTitle} numberOfLines={1}>{p.title}</Text>
                 </View>
               ))
@@ -176,8 +176,8 @@ function ItineraryView({trip, plans, days}: {
             <View style={styles.itinFooter}>
               <Text style={styles.itinFooterText}>
                 {dp.length} plan{dp.length !== 1 ? 's' : ''}
-                {cost > 0 ? ` · $${cost}` : ''}
               </Text>
+              {cost > 0 && <Text style={styles.itinFooterCost}>${cost}</Text>}
             </View>
           </View>
         );
@@ -827,7 +827,8 @@ const styles = StyleSheet.create({
   },
   itinDayHeader: {
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
   },
   itinDayNum: {
     fontSize: typography.xs,
@@ -837,11 +838,11 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   itinDayDate: {
-    fontSize: typography['2xl'] - 4,
+    fontSize: typography['2xl'],
     fontWeight: typography.semibold,
     color: colors.surface,
     marginTop: 2,
-    letterSpacing: -0.2,
+    letterSpacing: -0.3,
   },
   itinPlanRow: {
     flexDirection: 'row',
@@ -856,7 +857,7 @@ const styles = StyleSheet.create({
     fontSize: typography.bodySmall,
     color: colors.textSecondary,
     fontVariant: ['tabular-nums' as any],
-    width: 40,
+    width: 38,
     flexShrink: 0,
   },
   itinTitle: {
@@ -872,6 +873,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   itinFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
     paddingHorizontal: spacing.xl,
@@ -880,6 +884,11 @@ const styles = StyleSheet.create({
   itinFooterText: {
     fontSize: typography.bodySmall,
     color: colors.textSecondary,
+  },
+  itinFooterCost: {
+    fontSize: typography.bodySmall,
+    fontWeight: typography.semibold,
+    color: colors.textPrimary,
   },
 
   // Circular FAB
