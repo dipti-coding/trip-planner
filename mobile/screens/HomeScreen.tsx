@@ -541,6 +541,14 @@ export default function HomeScreen({navigation}: Props) {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    return navigation.addListener('focus', () => {
+      client.get<Trip[]>('/trips')
+        .then(r => setTrips(r.data))
+        .catch(() => {});
+    });
+  }, [navigation]);
+
   const sections = useMemo(() => {
     const q = query.toLowerCase();
     const withStatus: TripWithStatus[] = trips.map(t => ({

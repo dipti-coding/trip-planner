@@ -479,6 +479,28 @@ export default function TripDetailScreen({navigation, route}: Props) {
   const [scrolled, setScrolled] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('plans');
   const [addingPlan, setAddingPlan] = useState(false);
+
+  function handleDeleteTrip() {
+    Alert.alert(
+      'Delete trip',
+      `Delete "${trip?.name}"? This will also remove all its plans.`,
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await client.delete(`/trips/${tripId}`);
+              navigation.goBack();
+            } catch {
+              Alert.alert('Error', 'Could not delete trip. Please try again.');
+            }
+          },
+        },
+      ],
+    );
+  }
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const stripRef = useRef<ScrollView>(null);
 
@@ -571,12 +593,17 @@ export default function TripDetailScreen({navigation, route}: Props) {
                 {trip.name}
               </Text>
             )}
-            <TouchableOpacity style={styles.glassBtnWide}>
-              <View style={{flexDirection:'row', alignItems:'center', gap: 5}}>
-                <Icon name="doc" size={14} color={colors.surface}/>
-                <Text style={styles.glassBtnWideText}>PDF</Text>
-              </View>
-            </TouchableOpacity>
+            <View style={styles.navRight}>
+              <TouchableOpacity style={styles.glassBtnWide}>
+                <View style={{flexDirection:'row', alignItems:'center', gap: 5}}>
+                  <Icon name="doc" size={14} color={colors.surface}/>
+                  <Text style={styles.glassBtnWideText}>PDF</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.glassBtn} onPress={handleDeleteTrip}>
+                <Icon name="more" size={18} color={colors.surface}/>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {!scrolled && (
@@ -703,6 +730,9 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xs,
     paddingBottom: spacing.xs,
     gap: spacing.md,
+  },
+  navRight: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginLeft: 'auto',
   },
   glassBtn: {
     width: 38, height: 38, borderRadius: radii.chip,
