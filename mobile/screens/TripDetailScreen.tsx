@@ -157,12 +157,13 @@ function ItineraryView({trip, plans, days}: {
         const cost = dp.reduce((s, p) => s + (((p.details as any)?.cost ?? 0) as number), 0);
         return (
           <View key={date} style={styles.itinDayCard}>
-            <LinearGradient colors={gradient} style={styles.itinDayHeader}>
+            <View style={styles.itinDayHeader}>
+              <LinearGradient colors={gradient} style={StyleSheet.absoluteFill}/>
               <Text style={styles.itinDayNum}>
                 DAY {i + 1} · {fmtDayLabel(date).toUpperCase()}
               </Text>
               <Text style={styles.itinDayDate}>{fmtShort(date)}</Text>
-            </LinearGradient>
+            </View>
             {dp.length === 0 ? (
               <Text style={styles.itinEmpty}>Nothing planned</Text>
             ) : (
