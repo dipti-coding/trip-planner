@@ -2,8 +2,9 @@ import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import React from 'react';
-import {Platform, StyleSheet, Text} from 'react-native';
+import {Platform, StyleSheet} from 'react-native';
 import {enableScreens} from 'react-native-screens';
+import Icon from './components/Icon';
 import AccountScreen from './screens/AccountScreen';
 import DocumentsScreen from './screens/DocumentsScreen';
 import HomeScreen from './screens/HomeScreen';
@@ -20,6 +21,12 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator();
 
+const TAB_ICON: Record<string, string> = {
+  Trips:     'home',
+  Documents: 'doc',
+  Account:   'user',
+};
+
 function TripsStack() {
   return (
     <Stack.Navigator screenOptions={{headerShown: false}}>
@@ -29,12 +36,6 @@ function TripsStack() {
   );
 }
 
-const TAB_ICONS: Record<string, string> = {
-  Trips: '🏠',
-  Documents: '📄',
-  Account: '👤',
-};
-
 export default function App() {
   return (
     <NavigationContainer>
@@ -42,18 +43,16 @@ export default function App() {
         screenOptions={({route}) => ({
           headerShown: false,
           tabBarIcon: ({focused}) => (
-            <Text style={focused ? styles.tabIconActive : styles.tabIcon}>
-              {TAB_ICONS[route.name]}
-            </Text>
-          ),
-          tabBarLabel: ({focused, children}) => (
-            <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>
-              {children}
-            </Text>
+            <Icon
+              name={TAB_ICON[route.name] ?? 'star'}
+              size={22}
+              color={focused ? colors.accent : colors.textTertiary}
+            />
           ),
           tabBarStyle: styles.tabBar,
           tabBarActiveTintColor: colors.accent,
           tabBarInactiveTintColor: colors.textTertiary,
+          tabBarLabelStyle: styles.tabLabel,
         })}>
         <Tab.Screen name="Trips" component={TripsStack} />
         <Tab.Screen name="Documents" component={DocumentsScreen} />
@@ -71,16 +70,8 @@ const styles = StyleSheet.create({
     paddingBottom: Platform.OS === 'ios' ? 0 : 4,
     height: Platform.OS === 'ios' ? 83 : 60,
   },
-  tabIcon: {fontSize: 20},
-  tabIconActive: {fontSize: 20},
   tabLabel: {
     fontSize: typography.xs,
-    fontWeight: typography.medium,
-    color: colors.textTertiary,
-    marginBottom: 2,
-  },
-  tabLabelActive: {
-    color: colors.accent,
-    fontWeight: typography.semibold,
+    fontWeight: typography.medium as any,
   },
 });

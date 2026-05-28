@@ -17,8 +17,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import LinearGradient from 'react-native-linear-gradient';
 import {launchImageLibrary} from 'react-native-image-picker';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import client from '../api/client';
 import Icon from '../components/Icon';
 import PlanCard from '../components/PlanCard';
@@ -182,12 +184,15 @@ function AddPlanOverlay({
   onClose: () => void;
   onAdded: (plans: Plan[]) => void;
 }) {
+  const insets = useSafeAreaInsets();
   const [addStep, setAddStep] = useState<Exclude<AddStep, null>>('picker');
   const [rawText, setRawText] = useState('');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
   const [manualType, setManualType] = useState<string>('Activity');
+  const [manualDate, setManualDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   async function handleDetect() {
     if (addStep === 'paste' && !rawText.trim() && !imageUri) return;
@@ -234,8 +239,8 @@ function AddPlanOverlay({
 
   return (
     <View style={styles.addOverlay}>
-      {/* Nav bar */}
-      <View style={styles.addNavBar}>
+      {/* Nav bar — padded below status bar / dynamic island */}
+      <View style={[styles.addNavBar, {paddingTop: insets.top + spacing.sm}]}>
         {addStep === 'picker' ? (
           <TouchableOpacity onPress={onClose} style={styles.addNavBtn}>
             <Text style={styles.addNavBtnText}>Cancel</Text>
@@ -370,11 +375,32 @@ function AddPlanOverlay({
               placeholderTextColor={colors.textTertiary}
             />
             <Text style={styles.fieldLabel}>DATE & TIME</Text>
-            <TextInput
-              style={styles.manualInput}
-              placeholder="e.g. Sep 18, 6:30 PM"
-              placeholderTextColor={colors.textTertiary}
-            />
+            <TouchableOpacity
+              style={styles.datePickerRow}
+              onPress={() => setShowDatePicker(v => !v)}
+              activeOpacity={0.7}>
+              <Icon name="calendar" size={17} color={manualDate ? colors.textPrimary : colors.textTertiary}/>
+              <Text style={[styles.datePickerText, !manualDate && styles.datePickerPlaceholder]}>
+                {manualDate
+                  ? manualDate.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}) +
+                    '  ·  ' +
+                    manualDate.toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit'})
+                  : 'Select date & time'}
+              </Text>
+              <Icon name="chev-down" size={17} color={colors.textTertiary}/>
+            </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                value={manualDate ?? new Date()}
+                mode="datetime"
+                display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                onChange={(_e, date) => {
+                  if (date) { setManualDate(date); }
+                  if (Platform.OS === 'android') { setShowDatePicker(false); }
+                }}
+                style={styles.datePickerNative}
+              />
+            )}
             <TouchableOpacity style={[styles.detectBtn, styles.detectBtnDisabled]}>
               <Text style={styles.detectBtnText}>Save plan</Text>
             </TouchableOpacity>
@@ -921,5 +947,20 @@ const styles = StyleSheet.create({
     padding: spacing.lg, fontSize: typography.base,
     color: colors.textPrimary, backgroundColor: colors.bgBase,
     marginBottom: spacing.xl,
+  },
+  datePickerRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    borderWidth: 1, borderColor: colors.border, borderRadius: radii.xl,
+    paddingHorizontal: spacing.lg, paddingVertical: 13,
+    backgroundColor: colors.bgBase,
+    marginBottom: spacing.md,
+  },
+  datePickerText: {
+    flex: 1, fontSize: typography.base, color: colors.textPrimary,
+  },
+  datePickerPlaceholder: {color: colors.textTertiary},
+  datePickerNative: {
+    marginBottom: spacing.xl,
+    // On iOS `inline` display is full-width; let it size itself naturally
   },
 });
