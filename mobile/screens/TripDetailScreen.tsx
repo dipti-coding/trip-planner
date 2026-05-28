@@ -817,7 +817,7 @@ const styles = StyleSheet.create({
   emptyDayText: {fontSize: typography.base, color: colors.textTertiary},
 
   // Itinerary view
-  itinContent: {paddingBottom: 100, gap: spacing.xl},
+  itinContent: {paddingTop: spacing.xl, paddingBottom: 100, gap: spacing.xl},
   itinDayCard: {
     backgroundColor: colors.surface,
     borderRadius: radii.card,
@@ -833,8 +833,8 @@ const styles = StyleSheet.create({
   },
   itinDayHeader: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing['2xl'],
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
   },
   itinDayNum: {
     fontSize: typography.xs,
