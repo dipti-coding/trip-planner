@@ -20,7 +20,7 @@ def auth_client(db):
 def _login(client, password=None):
     return client.post("/auth/token", data={
         "username": os.environ["AUTH_USER_EMAIL"],
-        "password": password or "testpass123",
+        "password": password or os.environ["AUTH_USER_PWD"],
     })
 
 

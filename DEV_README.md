@@ -128,9 +128,9 @@ just ios 3   # boots whichever model is at position 3 in ios-list
 All API routes (except `/ping`) require a Bearer token. Get one with:
 
 ```bash
-curl -s -X POST https://api.ankit.link/auth/token \
+curl -s -X POST http://localhost:8000/auth/token \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=test@example.com&password=testpass123"
+  -d "username=<test_email>&password=<test_password>"
 ```
 
 Expected response:
@@ -145,9 +145,9 @@ Expected response:
 Pass the token in subsequent requests:
 
 ```bash
-TOKEN=$(curl -s -X POST https://api.ankit.link/auth/token \
+TOKEN=$(curl -s -X POST http://localhost:8000/auth/token \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=test@example.com&password=testpass123" \
+  -d "username=<test_email>&password=<test_password>" \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
 
 curl -s https://api.ankit.link/trips \
