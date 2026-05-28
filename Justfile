@@ -1,5 +1,5 @@
 set dotenv-load
-export PATH := ".venv/bin:" + env_var('PATH')
+export PATH := ".venv/bin:" + env_var('HOME') + "/bin:" + env_var('PATH')
 
 # Generate .env.docker from .env (escapes $ -> $$ so Docker Compose doesn't interpolate values)
 gen-docker-env:
@@ -125,3 +125,40 @@ ios sim="":
     echo "Waiting for simulator to boot..."
     until xcrun simctl list devices booted | grep -q "$UDID"; do sleep 1; done
     cd mobile && npm run ios -- --udid "$UDID"
+
+# ── AWS / Terraform ────────────────────────────────────────────────────────────
+
+# Initialize Terraform (first time only)
+tf-init:
+    cd infra && terraform init
+
+# Plan Terraform changes
+tf-plan:
+    cd infra && terraform plan
+
+# Apply Terraform changes
+tf-apply:
+    cd infra && terraform apply
+
+# Build Docker image and push to ECR
+ecr-push tag="latest":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+    REGION=$(cd infra && terraform output -raw ecr_repository_url | cut -d. -f4)
+    REPO=$(cd infra && terraform output -raw ecr_repository_url)
+    aws ecr get-login-password --region "$REGION" | docker login --username AWS --password-stdin "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com"
+    docker build --platform linux/amd64 -t "$REPO:{{tag}}" .
+    docker push "$REPO:{{tag}}"
+    echo "Pushed $REPO:{{tag}}"
+
+# Force a new ECS deployment (picks up the latest image)
+deploy tag="latest":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    just ecr-push {{tag}}
+    cd infra && terraform apply -var="ecr_image_tag={{tag}}" -auto-approve
+    CLUSTER=$(cd infra && terraform show -json | python3 -c "import sys,json; s=json.load(sys.stdin); [print(r['values']['name']) for r in s['values']['root_module']['resources'] if r['type']=='aws_ecs_cluster']")
+    SERVICE=$(aws ecs list-services --cluster "$CLUSTER" --query 'serviceArns[0]' --output text | xargs basename)
+    aws ecs update-service --cluster "$CLUSTER" --service "$SERVICE" --force-new-deployment --query 'service.serviceName' --output text
+    echo "Deployment triggered."
