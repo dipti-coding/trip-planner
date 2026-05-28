@@ -246,8 +246,9 @@ function AddPlanOverlay({
             <Text style={styles.addNavBtnText}>Cancel</Text>
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity onPress={() => setAddStep('picker')} style={styles.addNavBtn}>
-            <Text style={styles.addNavBtnText}>‹ Back</Text>
+          <TouchableOpacity onPress={() => setAddStep('picker')} style={styles.addNavBackBtn}>
+            <Icon name="chev-left" size={18} color={colors.textPrimary} stroke={2}/>
+            <Text style={styles.addNavBtnText}>Back</Text>
           </TouchableOpacity>
         )}
         <Text style={styles.addNavTitle}>
@@ -855,7 +856,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   addNavBtn: {minWidth: 64},
-  addNavBtnText: {fontSize: typography.base, color: colors.accent},
+  addNavBackBtn: {flexDirection: 'row', alignItems: 'center', gap: 2, minWidth: 64},
+  addNavBtnText: {fontSize: typography.base, fontWeight: typography.medium, color: colors.textPrimary},
   addNavTitle: {
     fontSize: typography.base, fontWeight: typography.semibold, color: colors.textPrimary,
   },
