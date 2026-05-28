@@ -21,7 +21,17 @@ export function fmtDayNum(iso: string): number {
 
 export function fmtTime(iso: string | null): string {
   if (!iso) return '';
-  return new Date(iso).toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit', hour12: false});
+  // Slice to 19 chars ("YYYY-MM-DDTHH:MM:SS") to strip any UTC offset/Z suffix.
+  // Stored datetimes are wall-clock local time; we never want UTC conversion here.
+  const d = new Date(iso.slice(0, 19));
+  return d.toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit', hour12: true});
+}
+
+/** 24-hour compact time ("14:35") — used where column width is tight. */
+export function fmtTime24(iso: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso.slice(0, 19));
+  return d.toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit', hour12: false});
 }
 
 export function fmtDuration(start: string | null, end: string | null): string {

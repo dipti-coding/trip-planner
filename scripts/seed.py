@@ -1,6 +1,7 @@
 """Seed the local database with test users, trips, and plans."""
 import sys
 import os
+import uuid
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -9,6 +10,8 @@ from datetime import date, datetime, timezone
 from app.db import SessionLocal
 from app.models import Plan, Trip, User
 from app.models.plan import PlanType
+
+DEV_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 
 
 def seed() -> None:
@@ -21,6 +24,7 @@ def seed() -> None:
 
         # --- User ---
         user = User(
+            id=DEV_USER_ID,
             email="traveler@example.com",
             home_city="San Francisco",
             activity_preferences=["hiking", "food", "culture"],
