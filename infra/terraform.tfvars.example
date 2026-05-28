@@ -1,0 +1,9 @@
+aws_region     = "us-west-2"
+app_name       = "trip-planner"
+domain_name    = "ankit.link"
+api_subdomain  = "api"
+db_username    = "trip_planner"
+db_name        = "trip_planner"
+ecr_image_tag  = "latest"
+fargate_cpu    = 256
+fargate_memory = 512
