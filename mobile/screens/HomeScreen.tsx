@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
+  Pressable,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -309,8 +310,8 @@ function AddTripWizard({
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
-      <View style={styles.wizardOverlay}>
-        <View style={styles.wizardSheet}>
+      <Pressable style={styles.wizardOverlay} onPress={handleClose}>
+        <Pressable style={styles.wizardSheet} onPress={() => {}}>
           {/* Drag handle */}
           <View style={styles.sheetHandle} />
 
@@ -463,8 +464,8 @@ function AddTripWizard({
               </TouchableOpacity>
             </View>
           )}
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }

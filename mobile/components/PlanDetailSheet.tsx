@@ -2,6 +2,7 @@ import React from 'react';
 import {
   Linking,
   Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -56,8 +57,8 @@ export default function PlanDetailSheet({plan, onClose, onDelete}: Props) {
 
   return (
     <Modal visible={!!plan} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={styles.sheet}>
+      <Pressable style={styles.overlay} onPress={onClose}>
+        <Pressable style={styles.sheet} onPress={() => {}}>
           {/* Drag handle */}
           <View style={styles.handle} />
 
@@ -151,8 +152,8 @@ export default function PlanDetailSheet({plan, onClose, onDelete}: Props) {
               </TouchableOpacity>
             </View>
           </ScrollView>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
