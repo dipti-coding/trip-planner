@@ -289,7 +289,7 @@ curl -s https://api.example.com/trips | python3 -c "import sys,json; t=json.load
 curl -s -X POST https://api.example.com/trips \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
-  -d '{"user_id":"96a84b90-d7d7-4f6a-8691-d084deda8991","name":"Hawaii Fall 2026","destination_city":"Maui, Hawaii","start_date":"2026-10-01","end_date":"2026-10-08"}' \
+  -d '{"user_id":"96a84b90-d7d7-4f6a-8691-d084deda8991","name":"Hawaii Fall 2026","destination_city":"Maui, Hawaii","start_date":"2026-10-01","end_date":"2026-10-30"}' \
   | python3 -m json.tool
 ```
 

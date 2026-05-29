@@ -107,15 +107,15 @@ ios sim="":
         SIM_NAME="${NAMES[$IDX]}"
     else
         UDID=""
-        SIM_NAME="iPhone 16 Pro"
+        SIM_NAME="iPhone 17 Pro"
         for i in "${!NAMES[@]}"; do
-            if [ "${NAMES[$i]}" = "iPhone 16 Pro" ]; then
+            if [ "${NAMES[$i]}" = "iPhone 17 Pro" ]; then
                 UDID="${UDIDS[$i]}"
                 break
             fi
         done
         if [ -z "$UDID" ]; then
-            echo "iPhone 16 Pro not found. Run 'just ios-list' to see available simulators."
+            echo "iPhone 17 Pro not found. Run 'just ios-list' to see available simulators."
             exit 1
         fi
     fi
