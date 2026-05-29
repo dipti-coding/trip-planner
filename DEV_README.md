@@ -52,15 +52,7 @@ cp .env.example .env
 
 The defaults in `.env.example` work for local development. If ports 5432 or 8000 are taken by another process (e.g. on a shared machine), set `POSTGRES_PORT` and `API_PORT` in `.env` to free ports. Do not commit `.env`.
 
-**3. Install system dependencies**
-
-```bash
-brew install tesseract
-```
-
-Tesseract is required for screenshot OCR (`POST /trips/{trip_id}/plans/parse-screenshot`).
-
-**4. Install Python dependencies**
+**3. Install Python dependencies**
 
 ```bash
 python -m venv .venv
@@ -442,6 +434,60 @@ xcrun simctl list devices available
 # Target a specific one
 npx react-native run-ios --simulator "iPhone 15"
 ```
+
+---
+
+## Testing on a Physical Device
+
+The **screenshot booking parser** (on-device OCR + Apple Intelligence) only runs on a real device — it is disabled on the simulator. To test it end-to-end against a local server:
+
+### Requirements
+
+- iPhone 15 Pro or later running **iOS 26+** with **Apple Intelligence enabled** (Settings → Apple Intelligence & Siri)
+- Phone and Mac on the **same Wi-Fi network**
+
+### 1. Point the app at your local server
+
+Find your Mac's LAN IP:
+
+```bash
+ipconfig getifaddr en0
+```
+
+Edit `mobile/.env`:
+
+```
+LOCAL_API_URL=http://<your-mac-ip>:8000
+```
+
+Do not commit this change — it's machine-specific.
+
+### 2. Start the local server
+
+```bash
+docker compose up -d postgres   # Postgres only (no API container)
+just migrate                    # run if schema has changed
+just dev                        # FastAPI with hot reload on 0.0.0.0:8000
+```
+
+Verify the phone can reach it:
+
+```bash
+curl http://<your-mac-ip>:8000/ping
+```
+
+### 3. Build and install on device
+
+Open Xcode, select your iPhone as the run destination, and hit **Run** (⌘R). Metro starts automatically; subsequent JS-only changes hot-reload without a rebuild.
+
+### 4. Test the screenshot flow
+
+1. Create a trip in the app on the device
+2. Open the trip → tap **+** → **Upload Booking Screenshot**
+3. Pick a booking confirmation from your photo library
+4. Tap **Detect & Extract** — OCR runs on-device, Apple Intelligence parses the text, the plan is created via `POST /trips/{id}/plans/from-parsed`
+
+Watch `just dev` output for the request log and any 4xx/5xx errors.
 
 ---
 
