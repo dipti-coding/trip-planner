@@ -6,6 +6,7 @@ import {
   Alert,
   Image,
   Linking,
+  NativeModules,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Platform,
@@ -17,6 +18,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+
+const {OCRModule, BookingParserModule} = NativeModules;
 import DateTimePicker from '@react-native-community/datetimepicker';
 import LinearGradient from 'react-native-linear-gradient';
 import {launchImageLibrary} from 'react-native-image-picker';
@@ -132,8 +135,23 @@ function ItineraryView({trip, plans, days}: {
 }) {
   // Reverse so dark end is at top → white text stays readable on all palettes
   const gradient = [...coverGradient(trip.destination_city)].reverse();
+  const undated = plans.filter(p => !p.start_datetime);
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.itinContent}>
+      {undated.length > 0 && (
+        <View style={styles.itinDayCard}>
+          <View style={styles.itinUnscheduledHeader}>
+            <Text style={styles.itinDayNum}>UNSCHEDULED</Text>
+            <Text style={styles.itinDayDate}>{undated.length} plan{undated.length !== 1 ? 's' : ''}</Text>
+          </View>
+          {undated.map(p => (
+            <View key={p.id} style={styles.itinPlanRow}>
+              <Text style={styles.itinTime}>—</Text>
+              <Text style={styles.itinTitle} numberOfLines={1}>{p.title}</Text>
+            </View>
+          ))}
+        </View>
+      )}
       {days.map((date, i) => {
         const dp = plans.filter(p => p.start_datetime?.slice(0, 10) === date);
         const cost = dp.reduce((s, p) => s + (((p.details as any)?.cost ?? 0) as number), 0);
@@ -187,6 +205,12 @@ function AddPlanOverlay({
   const insets = useSafeAreaInsets();
   const [addStep, setAddStep] = useState<Exclude<AddStep, null>>('picker');
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
+  const [screenshotAvailable, setScreenshotAvailable] = useState(false);
+
+  useEffect(() => {
+    BookingParserModule?.isAvailable().then(setScreenshotAvailable).catch(() => {});
+  }, []);
   const [submitting, setSubmitting] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
   const [manualType, setManualType] = useState<string>('Flight');
@@ -223,32 +247,36 @@ function AddPlanOverlay({
   }
 
   async function handleDetect() {
-    if (!imageUri) return;
+    if (!imageBase64) return;
     setSubmitting(true);
     setParseError(null);
     try {
-      const form = new FormData();
-      form.append('image', {uri: imageUri, name: 'screenshot.jpg', type: 'image/jpeg'} as any);
-      await client.post(`/trips/${tripId}/plans/parse-screenshot`, form, {
-        headers: {'Content-Type': 'multipart/form-data'},
-      });
+      const text: string = await OCRModule.recognizeText(imageBase64);
+      if (!text.trim()) {
+        setParseError('No text found in the screenshot. Try a clearer image.');
+        return;
+      }
+      const parsed = await BookingParserModule.parseBookingText(text);
+      await client.post(`/trips/${tripId}/plans/from-parsed`, parsed);
       const res = await client.get<Plan[]>(`/trips/${tripId}/plans`);
       onAdded(res.data);
       onClose();
     } catch (e: any) {
       const detail = e.response?.data?.detail;
-      setParseError(
-        typeof detail === 'string'
-          ? detail
-          : 'Could not detect plan type. Try a clearer screenshot of the booking confirmation.',
-      );
+      if (typeof detail === 'string') {
+        setParseError(detail);
+      } else if (e.message) {
+        setParseError(e.message);
+      } else {
+        setParseError('Could not detect plan type. Try a clearer screenshot of the booking confirmation.');
+      }
     } finally {
       setSubmitting(false);
     }
   }
 
   function pickScreenshot() {
-    launchImageLibrary({mediaType: 'photo', quality: 1}, response => {
+    launchImageLibrary({mediaType: 'photo', quality: 1, includeBase64: true}, response => {
       if (response.errorCode === 'permission') {
         Alert.alert(
           'Photo Access Required',
@@ -257,8 +285,10 @@ function AddPlanOverlay({
         );
         return;
       }
-      if (response.assets?.[0]?.uri) {
-        setImageUri(response.assets[0].uri);
+      const asset = response.assets?.[0];
+      if (asset?.uri && asset?.base64) {
+        setImageUri(asset.uri);
+        setImageBase64(asset.base64);
         setAddStep('screenshot');
       }
     });
@@ -297,19 +327,21 @@ function AddPlanOverlay({
           <View style={styles.addPickerContent}>
             <Text style={styles.addPickerSub}>How would you like to add this plan?</Text>
 
-            <TouchableOpacity style={styles.choiceCard} onPress={pickScreenshot} activeOpacity={0.8}>
-              <View style={[styles.choiceIcon, {backgroundColor: colors.accent}]}>
-                <Icon name="doc" size={22} color={colors.surface}/>
-              </View>
-              <View style={styles.choiceText}>
-                <Text style={styles.choiceTitle}>Upload Booking Screenshot</Text>
-                <Text style={styles.choiceSub}>Drop a booking screenshot. We extract dates, times, confirmation numbers and more.</Text>
-                <View style={styles.choiceTags}>
-                  <View style={styles.choiceTag}><Text style={styles.choiceTagText}>Screenshot</Text></View>
+            {screenshotAvailable && (
+              <TouchableOpacity style={styles.choiceCard} onPress={pickScreenshot} activeOpacity={0.8}>
+                <View style={[styles.choiceIcon, {backgroundColor: colors.accent}]}>
+                  <Icon name="doc" size={22} color={colors.surface}/>
                 </View>
-              </View>
-              <Text style={styles.choiceArrow}>›</Text>
-            </TouchableOpacity>
+                <View style={styles.choiceText}>
+                  <Text style={styles.choiceTitle}>Upload Booking Screenshot</Text>
+                  <Text style={styles.choiceSub}>Drop a booking screenshot. We extract dates, times, confirmation numbers and more.</Text>
+                  <View style={styles.choiceTags}>
+                    <View style={styles.choiceTag}><Text style={styles.choiceTagText}>Screenshot</Text></View>
+                  </View>
+                </View>
+                <Text style={styles.choiceArrow}>›</Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity style={styles.choiceCard} onPress={() => setAddStep('manual')} activeOpacity={0.8}>
               <View style={[styles.choiceIcon, {backgroundColor: colors.textSecondary}]}>
@@ -500,6 +532,11 @@ export default function TripDetailScreen({navigation, route}: Props) {
     [plans, activeDate],
   );
 
+  const undatedPlans = useMemo(
+    () => plans.filter(p => !p.start_datetime),
+    [plans],
+  );
+
   const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const top = e.nativeEvent.contentOffset.y;
     if (!scrolled && top > 56) setScrolled(true);
@@ -625,6 +662,21 @@ export default function TripDetailScreen({navigation, route}: Props) {
             plans={dayPlans}
             onSelectPlan={setSelectedPlan}
           />
+          {undatedPlans.length > 0 && (
+            <View style={styles.dayView}>
+              <View style={styles.dayHeader}>
+                <Text style={styles.dayHeaderDate}>No date</Text>
+                <Text style={styles.dayHeaderCount}>
+                  {undatedPlans.length} unscheduled plan{undatedPlans.length !== 1 ? 's' : ''}
+                </Text>
+              </View>
+              <View style={styles.planList}>
+                {undatedPlans.map(p => (
+                  <PlanCard key={p.id} plan={p} onPress={() => setSelectedPlan(p)} />
+                ))}
+              </View>
+            </View>
+          )}
         </ScrollView>
       )}
 {viewMode === 'itinerary' && (
@@ -787,6 +839,12 @@ const styles = StyleSheet.create({
     color: colors.textPrimary, letterSpacing: -0.05, marginTop: 2,
   },
   planList: {gap: spacing.lg, marginTop: spacing.xs},
+  itinUnscheduledHeader: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.textSecondary,
+  },
   emptyDay: {
     backgroundColor: colors.surface, borderRadius: radii.card,
     borderWidth: 1, borderColor: colors.border,
