@@ -4,7 +4,7 @@ import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
+  Image,
   Linking,
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -30,6 +30,7 @@ import type {Plan, Trip} from '../types';
 import {dateRange, fmtDow, fmtDayLabel, fmtDayNum, fmtShort, fmtTime, fmtTime24} from '../utils/dates';
 import type {RootStackParamList} from '../App';
 import {colors, coverGradient, radii, spacing, typography} from '../theme';
+import {TYPE_META} from '../assets/planTypes';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'TripDetail'>;
@@ -37,28 +38,9 @@ type Props = {
 };
 
 type ViewMode = 'plans' | 'itinerary';
-type AddStep = null | 'picker' | 'paste' | 'manual';
+type AddStep = null | 'picker' | 'screenshot' | 'manual';
 
-const PLAN_TYPES = ['Flight', 'Stay', 'Eat', 'Do'] as const;
-const PLAN_TYPE_ICONS: Record<string, string> = {
-  Flight: 'plane',
-  Stay:   'hotel',
-  Eat:    'fork',
-  Do:     'map-pin',
-};
-// Maps display labels to backend PlanType enum values
-const PLAN_TYPE_API: Record<string, string> = {
-  Flight: 'Flight',
-  Stay:   'Hotel',
-  Eat:    'Restaurant',
-  Do:     'Activity',
-};
-
-const SAMPLE_BOOKING = `Your booking confirmation – Air France
-Booking reference: AF-X42T9Q
-SFO → CDG, Sep 18 18:55–Sep 19 13:45
-Passenger: John Smith
-Seat: 24A`;
+const ALL_PLAN_TYPES = Object.keys(TYPE_META);
 
 const DETECT_TYPES = [
   {icon: 'plane',   label: 'Flight',   sub: 'Flight numbers, IATA codes, gate'},
@@ -204,7 +186,6 @@ function AddPlanOverlay({
 }) {
   const insets = useSafeAreaInsets();
   const [addStep, setAddStep] = useState<Exclude<AddStep, null>>('picker');
-  const [rawText, setRawText] = useState('');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
@@ -227,7 +208,7 @@ function AddPlanOverlay({
     setSubmitting(true);
     try {
       await client.post(`/trips/${tripId}/plans`, {
-        type: PLAN_TYPE_API[manualType] ?? manualType,
+        type: manualType,
         title: manualTitle.trim(),
         start_datetime: toLocalISO(manualDate),
       });
@@ -242,19 +223,15 @@ function AddPlanOverlay({
   }
 
   async function handleDetect() {
-    if (addStep === 'paste' && !rawText.trim() && !imageUri) return;
+    if (!imageUri) return;
     setSubmitting(true);
     setParseError(null);
     try {
-      if (imageUri) {
-        const form = new FormData();
-        form.append('image', {uri: imageUri, name: 'screenshot.jpg', type: 'image/jpeg'} as any);
-        await client.post(`/trips/${tripId}/plans/parse-screenshot`, form, {
-          headers: {'Content-Type': 'multipart/form-data'},
-        });
-      } else {
-        await client.post(`/trips/${tripId}/plans/parse-and-create`, {raw_text: rawText});
-      }
+      const form = new FormData();
+      form.append('image', {uri: imageUri, name: 'screenshot.jpg', type: 'image/jpeg'} as any);
+      await client.post(`/trips/${tripId}/plans/parse-screenshot`, form, {
+        headers: {'Content-Type': 'multipart/form-data'},
+      });
       const res = await client.get<Plan[]>(`/trips/${tripId}/plans`);
       onAdded(res.data);
       onClose();
@@ -263,7 +240,7 @@ function AddPlanOverlay({
       setParseError(
         typeof detail === 'string'
           ? detail
-          : 'Could not detect plan type. Try pasting more of the confirmation details.',
+          : 'Could not detect plan type. Try a clearer screenshot of the booking confirmation.',
       );
     } finally {
       setSubmitting(false);
@@ -280,7 +257,10 @@ function AddPlanOverlay({
         );
         return;
       }
-      if (response.assets?.[0]?.uri) setImageUri(response.assets[0].uri);
+      if (response.assets?.[0]?.uri) {
+        setImageUri(response.assets[0].uri);
+        setAddStep('screenshot');
+      }
     });
   }
 
@@ -299,7 +279,7 @@ function AddPlanOverlay({
           </TouchableOpacity>
         )}
         <Text style={styles.addNavTitle}>
-          {addStep === 'picker' ? 'New plan' : addStep === 'paste' ? 'Paste booking' : 'Enter manually'}
+          {addStep === 'picker' ? 'New plan' : addStep === 'screenshot' ? 'Upload Booking Screenshot' : 'Enter Booking Details'}
         </Text>
         <TouchableOpacity
           style={styles.addNavBtn}
@@ -317,15 +297,14 @@ function AddPlanOverlay({
           <View style={styles.addPickerContent}>
             <Text style={styles.addPickerSub}>How would you like to add this plan?</Text>
 
-            <TouchableOpacity style={styles.choiceCard} onPress={() => setAddStep('paste')} activeOpacity={0.8}>
+            <TouchableOpacity style={styles.choiceCard} onPress={pickScreenshot} activeOpacity={0.8}>
               <View style={[styles.choiceIcon, {backgroundColor: colors.accent}]}>
                 <Icon name="doc" size={22} color={colors.surface}/>
               </View>
               <View style={styles.choiceText}>
-                <Text style={styles.choiceTitle}>Paste a booking</Text>
-                <Text style={styles.choiceSub}>Forward email text or drop a screenshot. We extract dates, times, confirmation numbers and more.</Text>
+                <Text style={styles.choiceTitle}>Upload Booking Screenshot</Text>
+                <Text style={styles.choiceSub}>Drop a booking screenshot. We extract dates, times, confirmation numbers and more.</Text>
                 <View style={styles.choiceTags}>
-                  <View style={styles.choiceTag}><Text style={styles.choiceTagText}>Text</Text></View>
                   <View style={styles.choiceTag}><Text style={styles.choiceTagText}>Screenshot</Text></View>
                 </View>
               </View>
@@ -337,75 +316,44 @@ function AddPlanOverlay({
                 <Icon name="edit" size={22} color={colors.surface}/>
               </View>
               <View style={styles.choiceText}>
-                <Text style={styles.choiceTitle}>Enter manually</Text>
+                <Text style={styles.choiceTitle}>Enter Booking Details</Text>
                 <Text style={styles.choiceSub}>Type in the details — works for anything.</Text>
               </View>
               <Text style={styles.choiceArrow}>›</Text>
             </TouchableOpacity>
-
-            <Text style={styles.typePickerLabel}>PICK A TYPE</Text>
-            <View style={styles.typeRow}>
-              {PLAN_TYPES.map(t => (
-                <TouchableOpacity
-                  key={t}
-                  style={styles.typeBtn}
-                  onPress={() => { setManualType(t); setAddStep('manual'); }}
-                  activeOpacity={0.7}>
-                  <Icon name={PLAN_TYPE_ICONS[t]} size={22} color={colors.textSecondary}/>
-                  <Text style={styles.typeBtnLabel}>{t}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
           </View>
         )}
 
-        {addStep === 'paste' && (
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-            <View style={styles.addPickerContent}>
-              <Text style={styles.addPickerSub}>
-                Paste a confirmation email, or drop a screenshot. We'll detect the type and fill in the rest.
-              </Text>
-              <Text style={styles.fieldLabel}>Paste booking text</Text>
-              <TextInput
-                style={styles.pasteInput}
-                multiline
-                placeholder={'Paste here – "Your booking confirmation – Air\nFrance\nBooking reference: AF-X42T9Q\nSFO → CDG, Sep 18 18:55…"'}
-                placeholderTextColor={colors.textTertiary}
-                value={rawText}
-                onChangeText={setRawText}
-                autoFocus
-                textAlignVertical="top"
-              />
-              <View style={styles.pasteLinks}>
-                <TouchableOpacity onPress={() => setRawText(SAMPLE_BOOKING)}>
-                  <Text style={styles.pasteLinkText}>□ Use sample</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={pickScreenshot}>
-                  <Text style={styles.pasteLinkText}>↗ Screenshot{imageUri ? ' ✓' : ''}</Text>
-                </TouchableOpacity>
-              </View>
-              {parseError && <Text style={styles.parseError}>{parseError}</Text>}
-              <TouchableOpacity
-                style={[styles.detectBtn, (!rawText.trim() && !imageUri || submitting) && styles.detectBtnDisabled]}
-                onPress={handleDetect}
-                disabled={submitting || (!rawText.trim() && !imageUri)}
-                activeOpacity={0.8}>
-                {submitting
-                  ? <ActivityIndicator color={colors.surface} />
-                  : <Text style={styles.detectBtnText}>Detect & extract</Text>}
-              </TouchableOpacity>
-              <Text style={styles.detectSectionLabel}>WHAT WE DETECT</Text>
-              {DETECT_TYPES.map(dt => (
-                <View key={dt.label} style={styles.detectRow}>
-                  <Icon name={dt.icon} size={20} color={colors.textSecondary}/>
-                  <View>
-                    <Text style={styles.detectLabel}>{dt.label}</Text>
-                    <Text style={styles.detectSub}>{dt.sub}</Text>
-                  </View>
+        {addStep === 'screenshot' && imageUri && (
+          <View style={styles.addPickerContent}>
+            <Text style={styles.addPickerSub}>
+              Confirm your screenshot and tap Detect to extract booking details.
+            </Text>
+            <Image source={{uri: imageUri}} style={styles.screenshotPreview} resizeMode="cover" />
+            <TouchableOpacity style={styles.screenshotReplace} onPress={pickScreenshot} activeOpacity={0.7}>
+              <Text style={styles.screenshotReplaceText}>Choose a different photo</Text>
+            </TouchableOpacity>
+            {parseError && <Text style={styles.parseError}>{parseError}</Text>}
+            <TouchableOpacity
+              style={[styles.detectBtn, submitting && styles.detectBtnDisabled]}
+              onPress={handleDetect}
+              disabled={submitting}
+              activeOpacity={0.8}>
+              {submitting
+                ? <ActivityIndicator color={colors.surface} />
+                : <Text style={styles.detectBtnText}>Detect & extract</Text>}
+            </TouchableOpacity>
+            <Text style={styles.detectSectionLabel}>WHAT WE DETECT</Text>
+            {DETECT_TYPES.map(dt => (
+              <View key={dt.label} style={styles.detectRow}>
+                <Icon name={dt.icon} size={20} color={colors.textSecondary}/>
+                <View>
+                  <Text style={styles.detectLabel}>{dt.label}</Text>
+                  <Text style={styles.detectSub}>{dt.sub}</Text>
                 </View>
-              ))}
-            </View>
-          </KeyboardAvoidingView>
+              </View>
+            ))}
+          </View>
         )}
 
         {addStep === 'manual' && (
@@ -413,13 +361,13 @@ function AddPlanOverlay({
             <Text style={styles.addPickerSub}>Select a type, then fill in the details.</Text>
             <Text style={styles.fieldLabel}>TYPE</Text>
             <View style={styles.typeRow}>
-              {PLAN_TYPES.map(t => (
+              {ALL_PLAN_TYPES.map(t => (
                 <TouchableOpacity
                   key={t}
                   style={[styles.typeBtn, manualType === t && styles.typeBtnActive]}
                   onPress={() => setManualType(t)}
                   activeOpacity={0.7}>
-                  <Icon name={PLAN_TYPE_ICONS[t]} size={22} color={manualType === t ? colors.accent : colors.textSecondary}/>
+                  <Icon name={TYPE_META[t].icon} size={22} color={manualType === t ? colors.accent : colors.textSecondary}/>
                   <Text style={[styles.typeBtnLabel, manualType === t && styles.typeBtnLabelActive]}>{t}</Text>
                 </TouchableOpacity>
               ))}
@@ -1003,9 +951,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.32, textTransform: 'uppercase',
     color: colors.textTertiary, marginBottom: spacing.lg,
   },
-  typeRow: {flexDirection: 'row', gap: spacing.md, marginBottom: spacing.xl},
+  typeRow: {flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginBottom: spacing.xl},
   typeBtn: {
-    flex: 1, alignItems: 'center', paddingVertical: spacing.lg,
+    width: '22%', alignItems: 'center', paddingVertical: spacing.lg,
     borderWidth: 1, borderColor: colors.border,
     borderRadius: radii.xl, gap: spacing.sm,
     backgroundColor: colors.surface,
@@ -1019,14 +967,11 @@ const styles = StyleSheet.create({
     fontSize: typography.bodySmall, color: colors.textSecondary,
     marginBottom: spacing.sm,
   },
-  pasteInput: {
-    borderWidth: 1, borderColor: colors.border, borderRadius: radii.xl,
-    padding: spacing.lg, height: 160, fontSize: typography.base,
-    color: colors.textPrimary, backgroundColor: colors.bgBase,
-    marginBottom: spacing.md, textAlignVertical: 'top',
+  screenshotPreview: {
+    width: '100%', height: 200, borderRadius: radii.card, marginBottom: spacing.sm,
   },
-  pasteLinks: {flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.xl},
-  pasteLinkText: {fontSize: typography.base, color: colors.textSecondary},
+  screenshotReplace: {alignSelf: 'center', marginBottom: spacing.xl},
+  screenshotReplaceText: {fontSize: typography.base, color: colors.accent},
   parseError: {fontSize: typography.bodySmall, color: colors.danger, marginBottom: spacing.lg},
   detectBtn: {
     backgroundColor: colors.accent, borderRadius: radii.xl,

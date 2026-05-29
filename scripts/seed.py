@@ -11,7 +11,7 @@ from app.db import SessionLocal
 from app.models import Plan, Trip, User
 from app.models.plan import PlanType
 
-DEV_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
+DEV_USER_ID = uuid.UUID("96a84b90-d7d7-4f6a-8691-d084deda8991")
 
 
 def seed() -> None:
