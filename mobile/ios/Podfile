@@ -56,7 +56,8 @@ target 'TripPlanner' do
         # Inject local.xcconfig so each developer can supply DEVELOPMENT_TEAM
         # and PRODUCT_BUNDLE_IDENTIFIER without touching project.pbxproj.
         # The '?' makes the #include silent when the file doesn't exist.
-        include_line = '#include? "../../local.xcconfig"'
+        include_line = '#include? "../../../local.xcconfig"'
+        updated.gsub!(/#include\? "\.\.\/\.\.\/local\.xcconfig"/, include_line)  # fix old 2-level path
         updated += "\n#{include_line}\n" unless updated.include?(include_line)
 
         File.write(xcconfig_path, updated) if updated != content
