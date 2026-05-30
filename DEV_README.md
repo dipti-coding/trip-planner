@@ -450,8 +450,6 @@ The OCR text is sent to Apple Intelligence (`FoundationModels.LanguageModelSessi
 **Stage 3 — Backend**
 The pre-parsed `PlanCreate` body is `POST`ed to `POST /trips/{id}/plans/from-parsed`. The server does no OCR or LLM work — it validates and stores the data.
 
-This replaced an earlier approach that sent the raw image to the server for pytesseract OCR + regex parsing. The on-device approach keeps user data private, removes the pytesseract dependency, and handles a much wider variety of confirmation formats via the LLM.
-
 > **Simulator:** `BookingParserModule.isAvailable()` returns `false` on the simulator (FoundationModels is device-only). The app shows a fallback UI in that case — manual plan entry.  
 > **Device requirement:** iPhone 15 Pro or later, iOS 26+, Apple Intelligence enabled.
 
