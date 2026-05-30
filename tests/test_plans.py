@@ -1,12 +1,5 @@
-import io
-import io
 import uuid
 from unittest.mock import patch
-
-from PIL import Image, ImageDraw
-from unittest.mock import patch
-
-from PIL import Image, ImageDraw
 
 
 def test_create_flight_plan(client, user):
@@ -95,207 +88,60 @@ def test_delete_plan_not_found(client):
     assert resp.status_code == 404
 
 
-def test_parse_flight(client, user):
+def test_from_parsed_creates_flight_plan(client, user):
     trip = _make_trip(client, user)
-    resp = client.post(f"/trips/{trip['id']}/plans/parse-and-create", json={
-        "raw_text": (
-            "Your flight DL 405 departs from SFO on June 1, 2026 and arrives at JFK. "
-            "Airline: Delta. Seat: 12A. Gate: B22. Confirmation: ABCDEF."
-        )
+    resp = client.post(f"/trips/{trip['id']}/plans/from-parsed", json={
+        "type": "Flight",
+        "title": "DL 405 SFO → JFK",
+        "start_datetime": "2026-06-01T08:00:00",
+        "details": {"airline": "Delta", "flight_number": "DL 405", "departure_airport": "SFO", "arrival_airport": "JFK"},
     })
     assert resp.status_code == 201
     data = resp.json()
     assert data["type"] == "Flight"
-    assert data["details"].get("flight_number") == "DL 405"
+    assert data["details"]["flight_number"] == "DL 405"
 
 
-def test_parse_hotel(client, user):
+def test_from_parsed_date_outside_trip_range(client, user):
     trip = _make_trip(client, user)
-    resp = client.post(f"/trips/{trip['id']}/plans/parse-and-create", json={
-        "raw_text": (
-            "Grand Hyatt Hotel\n"
-            "Check-in: June 2, 2026\nCheck-out: June 5, 2026\n"
-            "Room: King Suite\nConfirmation: HTLXYZ89"
-        )
-    })
-    assert resp.status_code == 201
-    data = resp.json()
-    assert data["type"] == "Hotel"
-    assert data["details"].get("confirmation") == "HTLXYZ89"
-
-
-def test_parse_car_reservation(client, user):
-    trip = _make_trip(client, user)
-    resp = client.post(f"/trips/{trip['id']}/plans/parse-and-create", json={
-        "raw_text": (
-            "Enterprise Car Rental\n"
-            "Pickup location: LAX Airport\nDropoff location: Downtown LA\n"
-            "Car type: Compact\nConfirmation: CARZZ123\\nJune 15, 2026"
-        )
-    })
-    assert resp.status_code == 201
-    data = resp.json()
-    assert data["type"] == "CarReservation"
-    assert data["details"].get("rental_company") == "Enterprise"
-
-
-def test_parse_tour(client, user):
-    trip = _make_trip(client, user)
-    resp = client.post(f"/trips/{trip['id']}/plans/parse-and-create", json={
-        "raw_text": (
-            "Tokyo City Tour\n"
-            "Tour operator: JTB Travel\nConfirmation: TOURAA99\n"
-            "Meeting point: Shinjuku Station East Exit\nGroup size: 12 guests\nJune 5, 2026"
-        )
-    })
-    assert resp.status_code == 201
-    data = resp.json()
-    assert data["type"] == "Tour"
-    assert data["details"].get("confirmation") == "TOURAA99"
-
-
-def test_parse_cruise(client, user):
-    trip = _make_trip(client, user)
-    resp = client.post(f"/trips/{trip['id']}/plans/parse-and-create", json={
-        "raw_text": (
-            "Royal Caribbean Cruise Confirmation\n"
-            "Ship: Symphony of the Seas\nCabin: 8124\nCabin class: Balcony\n"
-            "Port of departure: Miami, FL\nEmbarkation: June 10, 2026\nConfirmation: CRUIS123"
-        )
-    })
-    assert resp.status_code == 201
-    data = resp.json()
-    assert data["type"] == "Cruise"
-    assert data["details"].get("cruise_line") == "Royal Caribbean"
-
-
-def test_parse_ferry(client, user):
-    trip = _make_trip(client, user)
-    resp = client.post(f"/trips/{trip['id']}/plans/parse-and-create", json={
-        "raw_text": (
-            "Ferry Crossing Confirmation\n"
-            "Departure port: Dover, UK\nArrival port: Calais, France\n"
-            "Vessel: MS Pride of Kent\nConfirmation: FRY5678\nJune 15, 2026"
-        )
-    })
-    assert resp.status_code == 201
-    data = resp.json()
-    assert data["type"] == "Ferry"
-    assert data["details"].get("confirmation") == "FRY5678"
-
-
-def test_parse_railway(client, user):
-    trip = _make_trip(client, user)
-    resp = client.post(f"/trips/{trip['id']}/plans/parse-and-create", json={
-        "raw_text": (
-            "Amtrak Train Reservation\n"
-            "Departs from station: New York Penn Station\n"
-            "Arrives at station: Washington DC Union Station\n"
-            "Seat: 14C\nConfirmation: AMTK123\nJune 20, 2026"
-        )
-    })
-    assert resp.status_code == 201
-    data = resp.json()
-    assert data["type"] == "RailwayRide"
-    assert data["details"].get("operator") == "Amtrak"
-
-
-def test_parse_bus(client, user):
-    trip = _make_trip(client, user)
-    resp = client.post(f"/trips/{trip['id']}/plans/parse-and-create", json={
-        "raw_text": (
-            "Greyhound Bus Ticket\n"
-            "Departs from terminal: New York Port Authority\n"
-            "Drop-off at terminal: Philadelphia Bus Terminal\n"
-            "Seat: 15A\nConfirmation: BUS43210\nJune 20, 2026"
-        )
-    })
-    assert resp.status_code == 201
-    data = resp.json()
-    assert data["type"] == "BusRide"
-    assert data["details"].get("operator") == "Greyhound"
-
-
-def test_parse_local_event(client, user):
-    trip = _make_trip(client, user)
-    resp = client.post(f"/trips/{trip['id']}/plans/parse-and-create", json={
-        "raw_text": (
-            "TAYLOR SWIFT - THE ERAS TOUR\n"
-            "Venue: SoFi Stadium\nSeat: Section 101 Row E Seat 12\n"
-            "Order: TSWFT9876\nJune 25, 2026"
-        )
-    })
-    assert resp.status_code == 201
-    data = resp.json()
-    assert data["type"] == "LocalEvent"
-    assert data["details"].get("venue") is not None
-
-
-def test_parse_date_outside_trip_range(client, user):
-    # Trip runs June 1–30 2026; confirmation text has a Nov 2025 date
-    trip = _make_trip(client, user)
-    resp = client.post(f"/trips/{trip['id']}/plans/parse-and-create", json={
-        "raw_text": (
-            "Your flight DL 100 departs SFO on 8 Nov 2025 at 09:25. "
-            "Arrives JFK. Confirmation: ABCDEF."
-        )
+    resp = client.post(f"/trips/{trip['id']}/plans/from-parsed", json={
+        "type": "Flight",
+        "title": "DL 100 SFO → JFK",
+        "start_datetime": "2025-11-08T09:25:00",
+        "details": {},
     })
     assert resp.status_code == 422
     assert "outside this trip" in resp.json()["detail"]
 
 
-def test_parse_unrecognized_text(client, user):
+def test_from_parsed_test_mode_clamps_out_of_range_date(client, user):
+    # Trip runs June 1–30 2026; parsed date is Nov 2025 (way outside).
+    # PARSE_TEST_MODE=1 should succeed and clamp to the trip's start date,
+    # preserving the original time-of-day.
     trip = _make_trip(client, user)
-    resp = client.post(f"/trips/{trip['id']}/plans/parse-and-create", json={
-        "raw_text": "This is just some random text with no travel information at all."
-    })
-    assert resp.status_code == 422
-
-
-def test_parse_trip_not_found(client):
-    resp = client.post(f"/trips/{uuid.uuid4()}/plans/parse-and-create", json={
-        "raw_text": "Your flight DL 405 departs SFO. Confirmation: ABCDEF."
-    })
-    assert resp.status_code == 404
-
-
-_FLIGHT_TEXT = (
-    "Your flight DL 405 departs from SFO on June 1, 2026 and arrives at JFK. "
-    "Airline: Delta. Seat: 12A. Confirmation: ABCDEF."
-)
-
-
-def test_parse_screenshot_creates_plan(client, user):
-    trip = _make_trip(client, user)
-    png = _make_png(_FLIGHT_TEXT)
-    with patch("app.routes.plans.extract_text_from_image", return_value=_FLIGHT_TEXT):
-        resp = client.post(
-            f"/trips/{trip['id']}/plans/parse-screenshot",
-            files={"image": ("screenshot.png", png, "image/png")},
-        )
+    with patch.dict("os.environ", {"PARSE_TEST_MODE": "1"}):
+        resp = client.post(f"/trips/{trip['id']}/plans/from-parsed", json={
+            "type": "Flight",
+            "title": "DL 100 SFO → JFK",
+            "start_datetime": "2025-11-08T09:25:00",
+            "details": {},
+        })
     assert resp.status_code == 201
     data = resp.json()
-    assert data["type"] == "Flight"
-    assert data["details"].get("flight_number") == "DL 405"
-
-
-def test_parse_screenshot_invalid_image(client, user):
-    trip = _make_trip(client, user)
-    with patch("app.routes.plans.extract_text_from_image", side_effect=Exception("bad image")):
-        resp = client.post(
-            f"/trips/{trip['id']}/plans/parse-screenshot",
-            files={"image": ("bad.png", b"not an image", "image/png")},
-        )
-    assert resp.status_code == 422
-    assert resp.json()["detail"] == "Could not read image"
-
-
-def test_parse_screenshot_trip_not_found(client):
-    png = _make_png("some text")
-    resp = client.post(
-        f"/trips/{uuid.uuid4()}/plans/parse-screenshot",
-        files={"image": ("screenshot.png", png, "image/png")},
+    assert data["start_datetime"].startswith("2026-06-01"), (
+        "date should be clamped to trip start date"
     )
+    assert "09:25:00" in data["start_datetime"], (
+        "time-of-day should be preserved from the parsed date"
+    )
+
+
+def test_from_parsed_trip_not_found(client):
+    resp = client.post(f"/trips/{uuid.uuid4()}/plans/from-parsed", json={
+        "type": "Flight",
+        "title": "Any flight",
+        "details": {},
+    })
     assert resp.status_code == 404
 
 
@@ -352,9 +198,3 @@ def _make_flight_plan(client, trip_id):
         },
     }).json()
 
-def _make_png(text: str) -> bytes:
-    img = Image.new("RGB", (400, 100), color="white")
-    ImageDraw.Draw(img).text((10, 10), text, fill="black")
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    return buf.getvalue()

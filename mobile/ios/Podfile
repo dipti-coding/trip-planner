@@ -30,5 +30,72 @@ target 'TripPlanner' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+      end
+    end
+
+    # RNScreens.modulemap lives in PODS_ROOT after pod install, but CocoaPods
+    # writes the xcconfig flag pointing to PODS_CONFIGURATION_BUILD_DIR (only
+    # exists after a first compile). Rewrite to the static PODS_ROOT path so
+    # device builds don't fail with "module map file not found".
+    installer.aggregate_targets.each do |target|
+      %w[debug release].each do |config_name|
+        xcconfig_path = target.xcconfig_path(config_name)
+        next unless File.exist?(xcconfig_path)
+        content = File.read(xcconfig_path)
+
+        # Fix RNScreens modulemap path
+        updated = content.gsub(
+          '"${PODS_CONFIGURATION_BUILD_DIR}/RNScreens/RNScreens.modulemap"',
+          '"${PODS_ROOT}/Headers/Public/RNScreens/RNScreens.modulemap"'
+        )
+
+        # Inject local.xcconfig so each developer can supply DEVELOPMENT_TEAM
+        # and PRODUCT_BUNDLE_IDENTIFIER without touching project.pbxproj.
+        # The '?' makes the #include silent when the file doesn't exist.
+        include_line = '#include? "../../../local.xcconfig"'
+        updated.gsub!(/#include\? "\.\.\/\.\.\/local\.xcconfig"/, include_line)  # fix old 2-level path
+        updated += "\n#{include_line}\n" unless updated.include?(include_line)
+
+        File.write(xcconfig_path, updated) if updated != content
+      end
+    end
+
+    # The Pods project extracts XCFramework slices (React, hermes, RN deps) in
+    # its own [CP] Copy XCFrameworks phases, but the TripPlanner app target has
+    # no such phase — so on a first device build the slices don't exist in
+    # PODS_XCFRAMEWORKS_BUILD_DIR when Swift compiles AppDelegate.swift and
+    # `import React` fails. Add the phase before Sources so the slices are
+    # always present before compilation.
+    app_project = installer.generated_projects.find { |p| p.path.basename.to_s == 'TripPlanner.xcodeproj' } ||
+                  Xcodeproj::Project.open('TripPlanner.xcodeproj')
+    app_target = app_project.native_targets.find { |t| t.name == 'TripPlanner' }
+    if app_target
+      app_target.build_configurations.each do |config|
+        config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+      end
+
+      # Add [CP] Copy XCFrameworks before Sources so the iphoneos slice of
+      # React.xcframework exists in PODS_XCFRAMEWORKS_BUILD_DIR before Swift
+      # compilation starts.
+      existing = app_target.build_phases.find { |p| p.respond_to?(:name) && p.name == '[CP] Copy XCFrameworks' }
+      unless existing
+        phase = app_project.new(Xcodeproj::Project::Object::PBXShellScriptBuildPhase)
+        phase.name = '[CP] Copy XCFrameworks'
+        phase.shell_script = <<~SHELL
+          "${PODS_ROOT}/Target Support Files/React-Core-prebuilt/React-Core-prebuilt-xcframeworks.sh"
+          "${PODS_ROOT}/Target Support Files/ReactNativeDependencies/ReactNativeDependencies-xcframeworks.sh"
+          "${PODS_ROOT}/Target Support Files/hermes-engine/hermes-engine-xcframeworks.sh"
+        SHELL
+        phase.always_out_of_date = '1'
+        sources_index = app_target.build_phases.index { |p| p.is_a?(Xcodeproj::Project::Object::PBXSourcesBuildPhase) }
+        app_target.build_phases.insert(sources_index, phase)
+      end
+
+      app_project.save
+    end
   end
 end

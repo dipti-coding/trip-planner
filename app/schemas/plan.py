@@ -14,8 +14,6 @@ class PlanCreate(BaseModel):
     details: dict = {}
 
 
-class ParseAndCreateRequest(BaseModel):
-    raw_text: str
 from app.schemas.plan_details import (
     ActivityDetails,
     RestaurantDetails,

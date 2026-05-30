@@ -4,6 +4,12 @@
   "workspaces": [
     "mobile"
   ],
+  "scripts": {
+    "postinstall": "patch-package"
+  },
+  "devDependencies": {
+    "patch-package": "^8.0.1"
+  },
   "engines": {
     "node": ">=20.0.0"
   }

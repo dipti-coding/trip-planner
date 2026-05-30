@@ -1,0 +1,6 @@
+// Developer-specific signing settings.
+// Copy this file to local.xcconfig and fill in your values.
+// local.xcconfig is gitignored — never commit it.
+
+DEVELOPMENT_TEAM = YOUR_TEAM_ID_HERE
+PRODUCT_BUNDLE_IDENTIFIER = com.yourcompany.tripplanner

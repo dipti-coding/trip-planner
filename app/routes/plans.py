@@ -1,16 +1,16 @@
+import logging
+import os
+from datetime import datetime
 from uuid import UUID
 
-import pytesseract
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.db import get_db
 from app.models import Plan, Trip
-from app.schemas.plan import PLAN_DETAILS_SCHEMA, ParseAndCreateRequest, PlanCreate, PlanResponse
-from app.services.ocr import extract_text_from_image
-from app.services.parsing import parse_confirmation_text
+from app.schemas.plan import PLAN_DETAILS_SCHEMA, PlanCreate, PlanResponse
 
 router = APIRouter(tags=["plans"])
 
@@ -54,63 +54,64 @@ def create_plan(trip_id: UUID, body: PlanCreate, db: Session = Depends(get_db), 
     return plan
 
 
-def _create_plan_from_text(trip: Trip, raw_text: str, db: Session) -> Plan:
-    try:
-        plan_type, title, start_dt, end_dt, details = parse_confirmation_text(raw_text)
-    except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
 
-    if start_dt and not (trip.start_date <= start_dt.date() <= trip.end_date):
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                f"Plan date {start_dt.strftime('%b %-d, %Y')} is outside this trip's dates "
-                f"({trip.start_date.strftime('%b %-d')} – {trip.end_date.strftime('%b %-d, %Y')})"
-            ),
+@router.post("/trips/{trip_id}/plans/from-parsed", response_model=PlanResponse, status_code=201)
+def create_plan_from_parsed(trip_id: UUID, body: PlanCreate, db: Session = Depends(get_db), _: str = Depends(get_current_user)):
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    test_mode = os.getenv("PARSE_TEST_MODE", "").strip() == "1"
+
+    if test_mode and not body.start_datetime:
+        logging.warning(
+            "[PARSE_TEST_MODE] No date parsed; defaulting to trip start date %s.",
+            trip.start_date.strftime("%b %-d, %Y"),
         )
+        body = body.model_copy(update={"start_datetime": datetime.combine(trip.start_date, datetime.min.time())})
 
-    details_schema = PLAN_DETAILS_SCHEMA[plan_type]
-    validated_details = details_schema(**details).model_dump(exclude_none=True)
+    if body.start_datetime and not (trip.start_date <= body.start_datetime.date() <= trip.end_date):
+        if test_mode:
+            logging.warning(
+                "[PARSE_TEST_MODE] Parsed date %s is outside trip %s–%s; using trip start date instead.",
+                body.start_datetime.strftime("%b %-d, %Y"),
+                trip.start_date.strftime("%b %-d"),
+                trip.end_date.strftime("%b %-d, %Y"),
+            )
+            body = body.model_copy(update={
+                "start_datetime": datetime.combine(trip.start_date, body.start_datetime.time()),
+                "end_datetime": (
+                    datetime.combine(trip.start_date, body.end_datetime.time())
+                    if body.end_datetime else None
+                ),
+            })
+        else:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Plan date {body.start_datetime.strftime('%b %-d, %Y')} is outside this trip's dates "
+                    f"({trip.start_date.strftime('%b %-d')} – {trip.end_date.strftime('%b %-d, %Y')})"
+                ),
+            )
+
+    details_schema = PLAN_DETAILS_SCHEMA[body.type]
+    try:
+        validated_details = details_schema(**body.details).model_dump(exclude_none=True)
+    except ValidationError as e:
+        raise HTTPException(status_code=422, detail=e.errors())
 
     plan = Plan(
-        trip_id=trip.id,
-        type=plan_type,
-        title=title,
-        start_datetime=start_dt,
-        end_datetime=end_dt,
+        trip_id=trip_id,
+        type=body.type,
+        title=body.title,
+        start_datetime=body.start_datetime,
+        end_datetime=body.end_datetime,
         details=validated_details,
     )
     db.add(plan)
     db.commit()
     db.refresh(plan)
     return plan
-
-
-@router.post("/trips/{trip_id}/plans/parse-and-create", response_model=PlanResponse, status_code=201)
-def parse_and_create_plan(trip_id: UUID, body: ParseAndCreateRequest, db: Session = Depends(get_db), _: str = Depends(get_current_user)):
-    trip = db.query(Trip).filter(Trip.id == trip_id).first()
-    if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
-    return _create_plan_from_text(trip, body.raw_text, db)
-
-
-@router.post("/trips/{trip_id}/plans/parse-screenshot", response_model=PlanResponse, status_code=201)
-async def parse_screenshot_and_create_plan(
-    trip_id: UUID, image: UploadFile = File(...), db: Session = Depends(get_db), _: str = Depends(get_current_user)
-):
-    trip = db.query(Trip).filter(Trip.id == trip_id).first()
-    if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
-
-    image_bytes = await image.read()
-    try:
-        raw_text = extract_text_from_image(image_bytes)
-    except pytesseract.TesseractNotFoundError:
-        raise HTTPException(status_code=500, detail="OCR engine not available — run: brew install tesseract")
-    except Exception:
-        raise HTTPException(status_code=422, detail="Could not read image")
-
-    return _create_plan_from_text(trip, raw_text, db)
 
 
 @router.get("/plans/{plan_id}", response_model=PlanResponse)
