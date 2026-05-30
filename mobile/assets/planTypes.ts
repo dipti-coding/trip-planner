@@ -1,20 +1,26 @@
+import {planColors} from '../theme';
+
 export type PlanTypeMeta = {color: string; icon: string; bg: string[]};
 
 /** icon values are Icon component name strings (see components/Icon.tsx) */
 export const TYPE_META: Record<string, PlanTypeMeta> = {
-  Flight:         {color: '#0f62fe', icon: 'plane',    bg: ['#4589ff', '#0f62fe']},
-  Hotel:          {color: '#8a3ffc', icon: 'hotel',    bg: ['#be95ff', '#8a3ffc']},
-  Restaurant:     {color: '#d2691e', icon: 'fork',     bg: ['#f1a266', '#d2691e']},
-  Activity:       {color: '#198038', icon: 'map-pin',  bg: ['#42be65', '#198038']},
-  Tour:           {color: '#198038', icon: 'compass',  bg: ['#42be65', '#198038']},
-  LocalEvent:     {color: '#da1e28', icon: 'flag',     bg: ['#ff8389', '#da1e28']},
-  CarReservation: {color: '#0f62fe', icon: 'route',    bg: ['#4589ff', '#0f62fe']},
-  RailwayRide:    {color: '#0f62fe', icon: 'route',    bg: ['#4589ff', '#0f62fe']},
-  BusRide:        {color: '#525252', icon: 'route',    bg: ['#8d8d8d', '#525252']},
-  Ferry:          {color: '#0f62fe', icon: 'compass',  bg: ['#4589ff', '#0f62fe']},
-  Cruise:         {color: '#0f62fe', icon: 'globe',    bg: ['#4589ff', '#0f62fe']},
-  MapDestination: {color: '#525252', icon: 'map-pin',  bg: ['#8d8d8d', '#525252']},
-  Meeting:        {color: '#525252', icon: 'calendar', bg: ['#8d8d8d', '#525252']},
+  Flight:         {color: planColors.flight.base,  icon: 'plane',    bg: [planColors.flight.tint,  planColors.flight.base]},
+  Hotel:          {color: planColors.hotel.base,   icon: 'hotel',    bg: [planColors.hotel.tint,   planColors.hotel.base]},
+  Restaurant:     {color: planColors.food.base,    icon: 'fork',     bg: [planColors.food.tint,    planColors.food.base]},
+  Activity:       {color: planColors.nature.base,  icon: 'map-pin',  bg: [planColors.nature.tint,  planColors.nature.base]},
+  Tour:           {color: planColors.nature.base,  icon: 'compass',  bg: [planColors.nature.tint,  planColors.nature.base]},
+  LocalEvent:     {color: planColors.event.base,   icon: 'flag',     bg: [planColors.event.tint,   planColors.event.base]},
+  CarReservation: {color: planColors.flight.base,  icon: 'route',    bg: [planColors.flight.tint,  planColors.flight.base]},
+  RailwayRide:    {color: planColors.flight.base,  icon: 'route',    bg: [planColors.flight.tint,  planColors.flight.base]},
+  BusRide:        {color: planColors.neutral.base, icon: 'route',    bg: [planColors.neutral.tint, planColors.neutral.base]},
+  Ferry:          {color: planColors.flight.base,  icon: 'compass',  bg: [planColors.flight.tint,  planColors.flight.base]},
+  Cruise:         {color: planColors.flight.base,  icon: 'globe',    bg: [planColors.flight.tint,  planColors.flight.base]},
+  MapDestination: {color: planColors.neutral.base, icon: 'map-pin',  bg: [planColors.neutral.tint, planColors.neutral.base]},
+  Meeting:        {color: planColors.neutral.base, icon: 'calendar', bg: [planColors.neutral.tint, planColors.neutral.base]},
 };
 
-export const DEFAULT_META: PlanTypeMeta = {color: '#525252', icon: 'star', bg: ['#8d8d8d', '#525252']};
+export const DEFAULT_META: PlanTypeMeta = {
+  color: planColors.neutral.base,
+  icon: 'star',
+  bg: [planColors.neutral.tint, planColors.neutral.base],
+};
