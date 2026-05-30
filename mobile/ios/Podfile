@@ -46,11 +46,20 @@ target 'TripPlanner' do
         xcconfig_path = target.xcconfig_path(config_name)
         next unless File.exist?(xcconfig_path)
         content = File.read(xcconfig_path)
-        fixed = content.gsub(
+
+        # Fix RNScreens modulemap path
+        updated = content.gsub(
           '"${PODS_CONFIGURATION_BUILD_DIR}/RNScreens/RNScreens.modulemap"',
           '"${PODS_ROOT}/Headers/Public/RNScreens/RNScreens.modulemap"'
         )
-        File.write(xcconfig_path, fixed) if fixed != content
+
+        # Inject local.xcconfig so each developer can supply DEVELOPMENT_TEAM
+        # and PRODUCT_BUNDLE_IDENTIFIER without touching project.pbxproj.
+        # The '?' makes the #include silent when the file doesn't exist.
+        include_line = '#include? "../../local.xcconfig"'
+        updated += "\n#{include_line}\n" unless updated.include?(include_line)
+
+        File.write(xcconfig_path, updated) if updated != content
       end
     end
 
