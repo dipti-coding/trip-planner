@@ -318,7 +318,6 @@
 				CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES = YES;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = AN8K2KK6ZU;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = TripPlanner/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
@@ -332,7 +331,6 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.diptidarne.tripplanner;
 				PRODUCT_NAME = TripPlanner;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_OBJC_BRIDGING_HEADER = "TripPlanner/TripPlanner-Bridging-Header.h";
@@ -351,7 +349,6 @@
 				CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES = YES;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = AN8K2KK6ZU;
 				INFOPLIST_FILE = TripPlanner/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -364,7 +361,6 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.diptidarne.tripplanner;
 				PRODUCT_NAME = TripPlanner;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_OBJC_BRIDGING_HEADER = "TripPlanner/TripPlanner-Bridging-Header.h";
