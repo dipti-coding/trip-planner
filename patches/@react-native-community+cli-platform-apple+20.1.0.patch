@@ -1,0 +1,15 @@
+diff --git a/node_modules/@react-native-community/cli-platform-apple/build/commands/runCommand/getBuildSettings.js b/node_modules/@react-native-community/cli-platform-apple/build/commands/runCommand/getBuildSettings.js
+index 9acc98e..d3f5c04 100644
+--- a/node_modules/@react-native-community/cli-platform-apple/build/commands/runCommand/getBuildSettings.js
++++ b/node_modules/@react-native-community/cli-platform-apple/build/commands/runCommand/getBuildSettings.js
+@@ -45,8 +45,8 @@ async function getBuildSettings(xcodeProject, mode, buildOutput, scheme, target)
+       selectedTarget = target;
+     }
+   }
+-  const targetIndex = applicationTargets.indexOf(selectedTarget);
+-  return settings[targetIndex].buildSettings;
++  const targetSetting = settings.find(s => s.target === selectedTarget);
++  return targetSetting ? targetSetting.buildSettings : null;
+ }
+ function getPlatformName(buildOutput) {
+   // Xcode can sometimes escape `=` with a backslash or put the value in quotes
