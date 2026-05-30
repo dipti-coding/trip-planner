@@ -437,6 +437,26 @@ npx react-native run-ios --simulator "iPhone 15"
 
 ---
 
+## Screenshot Booking Parser — Architecture
+
+Booking screenshots are parsed entirely on-device in two stages:
+
+**Stage 1 — OCR (`OCRModule.swift`)**
+Apple's Vision framework (`VNRecognizeTextRequest`) reads the image and returns the recognized text as a plain string. Runs on a background thread; no network call.
+
+**Stage 2 — Extraction (`BookingParserModule.swift`)**
+The OCR text is sent to Apple Intelligence (`FoundationModels.LanguageModelSession`) with a structured prompt asking for a JSON object with fields like `planType`, `startDate`, `confirmation`, `origin`, `destination`, etc. The module maps that JSON into the exact `PlanCreate` shape the backend expects, normalizing dates to ISO 8601 along the way.
+
+**Stage 3 — Backend**
+The pre-parsed `PlanCreate` body is `POST`ed to `POST /trips/{id}/plans/from-parsed`. The server does no OCR or LLM work — it validates and stores the data.
+
+This replaced an earlier approach that sent the raw image to the server for pytesseract OCR + regex parsing. The on-device approach keeps user data private, removes the pytesseract dependency, and handles a much wider variety of confirmation formats via the LLM.
+
+> **Simulator:** `BookingParserModule.isAvailable()` returns `false` on the simulator (FoundationModels is device-only). The app shows a fallback UI in that case — manual plan entry.  
+> **Device requirement:** iPhone 15 Pro or later, iOS 26+, Apple Intelligence enabled.
+
+---
+
 ## Testing on a Physical Device
 
 The **screenshot booking parser** (on-device OCR + Apple Intelligence) only runs on a real device — it is disabled on the simulator. To test it end-to-end against a local server:
