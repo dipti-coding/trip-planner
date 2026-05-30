@@ -26,7 +26,7 @@ export default function PlanCard({plan, onPress}: Props) {
         start={{x: 0, y: 0}}
         end={{x: 1, y: 1}}
         style={styles.thumb}>
-        <Icon name={meta.icon} size={24} color="#fff"/>
+        <Icon name={meta.icon} size={24} color={colors.surface}/>
       </LinearGradient>
 
       <View style={styles.content}>

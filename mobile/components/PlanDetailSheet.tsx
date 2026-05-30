@@ -17,6 +17,16 @@ import {fmtTime, fmtDuration} from '../utils/dates';
 import {getPlanLines, getDetailRows, getMapsQuery} from '../utils/planLines';
 import {colors, radii, spacing, typography} from '../theme';
 
+// Glass / overlay compositing values — not part of the design-system token set
+const HERO_SCRIM       = ['rgba(0,0,0,0)', 'rgba(0,0,0,0.52)'];
+const OVERLAY_BG       = 'rgba(0,0,0,0.45)';
+const HANDLE_COLOR     = 'rgba(255,255,255,0.70)';
+const CLOSE_BTN_BG     = 'rgba(0,0,0,0.35)';
+const CHIP_BG          = 'rgba(255,255,255,0.92)';
+const CHIP_BORDER      = 'rgba(255,255,255,0.35)';
+const HERO_TIME_COLOR  = 'rgba(255,255,255,0.82)';
+const HERO_SUB_COLOR   = 'rgba(255,255,255,0.88)';
+
 type Props = {
   plan: Plan | null;
   onClose: () => void;
@@ -49,21 +59,21 @@ export default function PlanDetailSheet({plan, onClose, onDelete}: Props) {
               />
               {/* Dark scrim for text legibility */}
               <LinearGradient
-                colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.52)']}
+                colors={HERO_SCRIM}
                 style={StyleSheet.absoluteFill}
               />
               {/* Watermark icon */}
               <View style={styles.watermark} pointerEvents="none">
-                <Icon name={meta.icon} size={84} color="#fff"/>
+                <Icon name={meta.icon} size={84} color={colors.surface}/>
               </View>
               {/* Drag handle */}
               <View style={styles.handle}/>
               {/* Top row: close + type chip */}
               <View style={styles.heroTopRow}>
                 <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-                  <Icon name="x" size={18} color="#fff" stroke={2}/>
+                  <Icon name="x" size={18} color={colors.surface} stroke={2}/>
                 </TouchableOpacity>
-                <View style={[styles.typeChip, {borderColor: 'rgba(255,255,255,0.35)'}]}>
+                <View style={[styles.typeChip, {borderColor: CHIP_BORDER}]}>
                   <Icon name={meta.icon} size={12} color={meta.color}/>
                   <Text style={[styles.typeChipText, {color: meta.color}]}>{plan.type}</Text>
                 </View>
@@ -166,7 +176,7 @@ export default function PlanDetailSheet({plan, onClose, onDelete}: Props) {
 }
 
 const styles = StyleSheet.create({
-  overlay: {flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)'},
+  overlay: {flex: 1, justifyContent: 'flex-end', backgroundColor: OVERLAY_BG},
   sheet: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: 24,
@@ -183,7 +193,7 @@ const styles = StyleSheet.create({
   handle: {
     position: 'absolute', top: 12, alignSelf: 'center',
     width: 36, height: 4, borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.7)',
+    backgroundColor: HANDLE_COLOR,
     zIndex: 2,
     // alignSelf doesn't work on absolute; center via left/right
     left: '50%',
@@ -196,12 +206,12 @@ const styles = StyleSheet.create({
   },
   closeBtn: {
     width: 32, height: 32, borderRadius: radii.chip,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: CLOSE_BTN_BG,
     alignItems: 'center', justifyContent: 'center',
   },
   typeChip: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: 'rgba(255,255,255,0.92)',
+    backgroundColor: CHIP_BG,
     borderRadius: radii.chip,
     paddingHorizontal: 10, paddingVertical: 4,
     borderWidth: 0.5,
@@ -209,14 +219,14 @@ const styles = StyleSheet.create({
   typeChipText: {fontSize: typography.sm, fontWeight: typography.semibold},
   heroContent: {padding: spacing.xl, zIndex: 1},
   heroTime: {
-    fontSize: typography.bodySmall, color: 'rgba(255,255,255,0.82)', marginBottom: 4,
+    fontSize: typography.bodySmall, color: HERO_TIME_COLOR, marginBottom: 4,
   },
   heroHeading: {
     fontSize: 26, fontWeight: typography.semibold,
     color: colors.surface, letterSpacing: -0.3, lineHeight: 32,
   },
   heroCompany: {
-    fontSize: typography.base, color: 'rgba(255,255,255,0.88)', marginTop: 4,
+    fontSize: typography.base, color: HERO_SUB_COLOR, marginTop: 4,
   },
 
   // Actions
@@ -258,7 +268,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary, fontWeight: typography.medium,
     textAlign: 'right',
   },
-  detailValueMono: {fontFamily: 'Courier', letterSpacing: 0.3},
+  detailValueMono: {fontFamily: typography.fontMono, letterSpacing: 0.3},
 
   // Link rows
   linkSection: {
