@@ -91,6 +91,27 @@ The API is now running at `http://localhost:${API_PORT}` (default 8000). Interac
 
 ---
 
+## iOS Signing Setup (one-time)
+
+`DEVELOPMENT_TEAM` and `PRODUCT_BUNDLE_IDENTIFIER` are not stored in `project.pbxproj`. Each developer supplies them via a gitignored `local.xcconfig`:
+
+```bash
+cp mobile/ios/local.xcconfig.example mobile/ios/local.xcconfig
+```
+
+Then edit `mobile/ios/local.xcconfig` with your values:
+
+```
+DEVELOPMENT_TEAM = YOUR_TEAM_ID_HERE
+PRODUCT_BUNDLE_IDENTIFIER = com.yourcompany.tripplanner
+```
+
+Your Team ID is in [Xcode → Settings → Accounts](xcode://prefs?pane=accounts) or at [developer.apple.com/account](https://developer.apple.com/account) under Membership. The file is gitignored — never commit it.
+
+After `pod install`, the Podfile hook automatically includes `local.xcconfig` in the generated Pods xcconfigs, so the values are picked up at build time.
+
+---
+
 ## Run the iOS Simulator
 
 **Boot iPhone 16 Pro and launch the app:**
