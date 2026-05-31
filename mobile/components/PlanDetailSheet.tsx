@@ -18,14 +18,11 @@ import {getPlanLines, getDetailRows, getMapsQuery} from '../utils/planLines';
 import {colors, radii, spacing, typography} from '../theme';
 
 // Glass / overlay compositing values — not part of the design-system token set
-const HERO_SCRIM       = ['rgba(0,0,0,0)', 'rgba(0,0,0,0.52)'];
 const OVERLAY_BG       = 'rgba(0,0,0,0.45)';
 const HANDLE_COLOR     = 'rgba(255,255,255,0.70)';
 const CLOSE_BTN_BG     = 'rgba(0,0,0,0.35)';
 const CHIP_BG          = 'rgba(255,255,255,0.92)';
 const CHIP_BORDER      = 'rgba(255,255,255,0.35)';
-const HERO_TIME_COLOR  = 'rgba(255,255,255,0.82)';
-const HERO_SUB_COLOR   = 'rgba(255,255,255,0.88)';
 
 type Props = {
   plan: Plan | null;
@@ -49,22 +46,17 @@ export default function PlanDetailSheet({plan, onClose, onDelete}: Props) {
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={() => {}}>
           <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
-            {/* Hero */}
+            {/* Hero — gradient fades from plan type color → white */}
             <View style={styles.hero}>
               <LinearGradient
-                colors={meta.bg}
+                colors={[meta.color, '#ffffff']}
                 start={{x: 0, y: 0}}
-                end={{x: 1, y: 1}}
-                style={StyleSheet.absoluteFill}
-              />
-              {/* Dark scrim for text legibility */}
-              <LinearGradient
-                colors={HERO_SCRIM}
+                end={{x: 0, y: 1}}
                 style={StyleSheet.absoluteFill}
               />
               {/* Watermark icon */}
               <View style={styles.watermark} pointerEvents="none">
-                <Icon name={meta.icon} size={84} color={colors.surface}/>
+                <Icon name={meta.icon} size={84} color="rgba(0,0,0,0.08)"/>
               </View>
               {/* Drag handle */}
               <View style={styles.handle}/>
@@ -78,7 +70,7 @@ export default function PlanDetailSheet({plan, onClose, onDelete}: Props) {
                   <Text style={[styles.typeChipText, {color: meta.color}]}>{plan.type}</Text>
                 </View>
               </View>
-              {/* Bottom overlay: time · duration, heading, company */}
+              {/* Bottom content: time · duration, heading, company — dark text on white */}
               <View style={styles.heroContent}>
                 {(time || dur) ? (
                   <Text style={styles.heroTime}>
@@ -188,14 +180,13 @@ const styles = StyleSheet.create({
   // Hero
   hero: {height: 220, justifyContent: 'flex-end'},
   watermark: {
-    position: 'absolute', right: 20, bottom: 20, opacity: 0.25,
+    position: 'absolute', right: 20, bottom: 20, opacity: 1,
   },
   handle: {
     position: 'absolute', top: 12, alignSelf: 'center',
     width: 36, height: 4, borderRadius: 2,
     backgroundColor: HANDLE_COLOR,
     zIndex: 2,
-    // alignSelf doesn't work on absolute; center via left/right
     left: '50%',
     marginLeft: -18,
   },
@@ -219,14 +210,14 @@ const styles = StyleSheet.create({
   typeChipText: {fontSize: typography.sm, fontWeight: typography.semibold},
   heroContent: {padding: spacing.xl, zIndex: 1},
   heroTime: {
-    fontSize: typography.bodySmall, color: HERO_TIME_COLOR, marginBottom: 4,
+    fontSize: typography.bodySmall, color: colors.textSecondary, marginBottom: 4,
   },
   heroHeading: {
     fontSize: 26, fontWeight: typography.semibold,
-    color: colors.surface, letterSpacing: -0.3, lineHeight: 32,
+    color: colors.textPrimary, letterSpacing: -0.3, lineHeight: 32,
   },
   heroCompany: {
-    fontSize: typography.base, color: HERO_SUB_COLOR, marginTop: 4,
+    fontSize: typography.base, color: colors.textSecondary, marginTop: 4,
   },
 
   // Actions

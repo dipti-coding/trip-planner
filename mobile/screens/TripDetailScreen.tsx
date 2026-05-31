@@ -21,7 +21,8 @@ import {
 
 const {OCRModule, BookingParserModule} = NativeModules;
 import DateTimePicker from '@react-native-community/datetimepicker';
-import LinearGradient from 'react-native-linear-gradient';
+import {DestinationCover} from '../components/DestinationCovers';
+import {findDestination} from '../utils/destinations';
 import {launchImageLibrary} from 'react-native-image-picker';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import client from '../api/client';
@@ -32,7 +33,7 @@ import {PlaneSpinner} from '../components/Spinner';
 import type {Plan, Trip} from '../types';
 import {dateRange, fmtDow, fmtDayLabel, fmtDayNum, fmtShort, fmtTime, fmtTime24} from '../utils/dates';
 import type {RootStackParamList} from '../App';
-import {colors, coverGradient, radii, spacing, typography} from '../theme';
+import {colors, tripTint, lightTint, radii, spacing, typography} from '../theme';
 import {TYPE_META} from '../assets/planTypes';
 
 type Props = {
@@ -133,8 +134,7 @@ function ItineraryView({trip, plans, days}: {
   plans: Plan[];
   days: string[];
 }) {
-  // Reverse so dark end is at top → white text stays readable on all palettes
-  const gradient = [...coverGradient(trip.destination_city)].reverse();
+  const tint = tripTint(trip.id);
   const undated = plans.filter(p => !p.start_datetime);
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.itinContent}>
@@ -158,7 +158,7 @@ function ItineraryView({trip, plans, days}: {
         return (
           <View key={date} style={styles.itinDayCard}>
             <View style={styles.itinDayHeader}>
-              <LinearGradient colors={gradient} style={StyleSheet.absoluteFill}/>
+              <View style={[StyleSheet.absoluteFill, {backgroundColor: lightTint(tint)}]} />
               <Text style={styles.itinDayNum}>
                 DAY {i + 1} · {fmtDayLabel(date).toUpperCase()}
               </Text>
@@ -562,12 +562,15 @@ export default function TripDetailScreen({navigation, route}: Props) {
     );
   }
 
-  const gradient = coverGradient(trip.destination_city);
+  const dest = findDestination(trip.destination_city);
+  const tint = tripTint(trip.id);
 
   return (
     <View style={styles.container}>
-      {/* Header with cover gradient */}
-      <LinearGradient colors={gradient} style={styles.header}>
+      {/* Header with SVG cover + trip tint */}
+      <View style={styles.header}>
+        <DestinationCover type={dest?.type ?? 'other'} />
+        <View style={[StyleSheet.absoluteFill, {backgroundColor: tint, opacity: 0.22}]} />
         <SafeAreaView>
           <View style={styles.navRow}>
             <TouchableOpacity style={styles.glassBtn} onPress={() => navigation.goBack()}>
@@ -647,7 +650,7 @@ export default function TripDetailScreen({navigation, route}: Props) {
             </ScrollView>
           )}
         </SafeAreaView>
-      </LinearGradient>
+      </View>
 
       {/* Content */}
       {viewMode === 'plans' && (
@@ -722,7 +725,7 @@ const styles = StyleSheet.create({
   centered: {flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing['2xl']},
 
   // Header
-  header: {},
+  header: {overflow: 'hidden'},
   navRow: {
     flexDirection: 'row',
     alignItems: 'center',

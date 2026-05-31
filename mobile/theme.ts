@@ -105,32 +105,43 @@ export const spacing = {
   '2xl': 24,
 } as const;
 
-// Destination cover gradients — muted, soothing tones, dark→light top-to-bottom
-// so white text on the top portion is always readable
-const coverPalette: Record<string, string[]> = {
-  tokyo:     ['#5C4A7A', '#8B6BA8', '#B8A0CC', '#DDD0E8'],  // muted plum
-  iceland:   ['#2A4A6E', '#4A78A0', '#7AA8C8', '#B0CDE0'],  // muted arctic blue
-  paris:     ['#6B4E38', '#9C7A58', '#C4A882', '#E4D0B4'],  // muted warm amber
-  spring:    ['#3A6648', '#5E9870', '#90C8A0', '#C4E4CC'],  // muted sage green
-  summer:    ['#7A4A28', '#B07848', '#D4A870', '#EDD0A0'],  // muted terracotta
-  fall:      ['#5C3A28', '#8C6248', '#B89078', '#D8BCA8'],  // muted brown
-  winter:    ['#2E4060', '#4A6488', '#7898B8', '#A8BED4'],  // muted slate blue
-  beach:     ['#1E6878', '#3898AA', '#70C0CC', '#B0DCE0'],  // muted teal
-  mountains: ['#3A5070', '#5A7898', '#88A8C4', '#B8CCD8'],  // muted steel blue
-  default:   ['#3A5888', '#5878A8', '#88A0C8', '#B8C8E0'],  // muted blue
-};
+// Deterministic tint color per trip — derived from trip ID, used on card covers and detail header
+const TINT_PALETTE = [
+  '#E8432D', // coral-red
+  '#F97316', // amber-orange
+  '#3B82F6', // sky-blue
+  '#8B5CF6', // violet
+  '#EC4899', // rose-pink
+  '#06B6D4', // cyan-teal
+  '#10B981', // emerald
+  '#EAB308', // gold-yellow
+  '#6366F1', // indigo
+  '#D97706', // warm-amber
+];
 
-const SEASON_KEYS = ['spring', 'summer', 'fall', 'winter'] as const;
-
-export function coverGradient(city: string): string[] {
-  const key = city.toLowerCase().replace(/\s+/g, '');
-  if (key.includes('tokyo') || key.includes('japan'))     return coverPalette.tokyo;
-  if (key.includes('iceland') || key.includes('reykjavik')) return coverPalette.iceland;
-  if (key.includes('paris') || key.includes('france'))    return coverPalette.paris;
-  if (key.includes('beach') || key.includes('miami') || key.includes('bali')) return coverPalette.beach;
-  if (key.includes('mount') || key.includes('alps') || key.includes('hike')) return coverPalette.mountains;
-  // deterministic hash → one of the four city-season variants
-  let hash = 0;
-  for (let i = 0; i < city.length; i++) hash = (hash * 31 + city.charCodeAt(i)) & 0xffff;
-  return coverPalette[SEASON_KEYS[hash % 4]];
+/** Lighter pastel version of a tint hex color — mix 55% tint + 45% white. */
+export function lightTint(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const mix = (c: number) => Math.round(c * 0.55 + 255 * 0.45).toString(16).padStart(2, '0');
+  return `#${mix(r)}${mix(g)}${mix(b)}`;
 }
+
+export function tripTint(id: string): string {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) & 0xffff;
+  return TINT_PALETTE[h % TINT_PALETTE.length];
+}
+
+// Solid color per destination type — used for small thumbnails (44×44, 28×28)
+// Colors match the dominant hue of each SVG cover illustration
+export const TYPE_COLORS: Record<string, string> = {
+  city:       '#0D2152',  // midnight blue (CityCover sky)
+  beach:      '#0284C7',  // ocean blue (BeachCover water)
+  island:     '#0891B2',  // cyan (IslandCover sea)
+  mountain:   '#1E1B4B',  // deep indigo (MountainCover sky)
+  nature:     '#166534',  // forest green (NatureCover hills)
+  historical: '#92400E',  // amber (HistoricalCover columns)
+  other:      '#3A5888',  // muted blue (default)
+};
