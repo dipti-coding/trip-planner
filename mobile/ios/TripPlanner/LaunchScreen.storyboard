@@ -15,19 +15,37 @@
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="PlanMyTrip" textAlignment="center" lineBreakMode="middleTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="name-label">
+                            <!-- Full-bleed background: scaleAspectFill pushes the opaque
+                                 white PNG corners beyond the screen edges. -->
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFill" image="LaunchIcon" translatesAutoresizingMaskIntoConstraints="NO" id="bg-image">
+                                <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
+                            </imageView>
+                            <!-- Dark overlay so "wandur" is always legible -->
+                            <view opaque="NO" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="overlay">
+                                <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
+                                <color key="backgroundColor" red="0" green="0" blue="0" alpha="0.35" colorSpace="calibratedRGB"/>
+                            </view>
+                            <!-- App name -->
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="wandur" textAlignment="center" lineBreakMode="middleTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="name-label">
                                 <rect key="frame" x="0.0" y="406" width="393" height="40"/>
-                                <fontDescription key="fontDescription" type="boldSystem" pointSize="28"/>
+                                <fontDescription key="fontDescription" type="boldSystem" pointSize="34"/>
                                 <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="calibratedRGB"/>
                                 <nil key="highlightedColor"/>
                             </label>
                         </subviews>
-                        <!-- Midnight primary[700] = #0B2150 -->
-                        <color key="backgroundColor" red="0.043" green="0.129" blue="0.314" alpha="1" colorSpace="calibratedRGB"/>
+                        <color key="backgroundColor" red="0" green="0" blue="0" alpha="1" colorSpace="calibratedRGB"/>
                         <constraints>
+                            <constraint firstItem="bg-image" firstAttribute="leading"  secondItem="Ze5-6b-2t3" secondAttribute="leading"  id="bg-lead"/>
+                            <constraint firstItem="bg-image" firstAttribute="trailing" secondItem="Ze5-6b-2t3" secondAttribute="trailing" id="bg-trail"/>
+                            <constraint firstItem="bg-image" firstAttribute="top"      secondItem="Ze5-6b-2t3" secondAttribute="top"      id="bg-top"/>
+                            <constraint firstItem="bg-image" firstAttribute="bottom"   secondItem="Ze5-6b-2t3" secondAttribute="bottom"   id="bg-bot"/>
+                            <constraint firstItem="overlay" firstAttribute="leading"  secondItem="Ze5-6b-2t3" secondAttribute="leading"  id="ov-lead"/>
+                            <constraint firstItem="overlay" firstAttribute="trailing" secondItem="Ze5-6b-2t3" secondAttribute="trailing" id="ov-trail"/>
+                            <constraint firstItem="overlay" firstAttribute="top"      secondItem="Ze5-6b-2t3" secondAttribute="top"      id="ov-top"/>
+                            <constraint firstItem="overlay" firstAttribute="bottom"   secondItem="Ze5-6b-2t3" secondAttribute="bottom"   id="ov-bot"/>
                             <constraint firstItem="name-label" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="label-cx"/>
                             <constraint firstItem="name-label" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="label-cy"/>
-                            <constraint firstItem="name-label" firstAttribute="leading" secondItem="Ze5-6b-2t3" secondAttribute="leading" id="label-lead"/>
+                            <constraint firstItem="name-label" firstAttribute="leading"  secondItem="Ze5-6b-2t3" secondAttribute="leading"  id="label-lead"/>
                             <constraint firstItem="name-label" firstAttribute="trailing" secondItem="Ze5-6b-2t3" secondAttribute="trailing" id="label-trail"/>
                         </constraints>
                     </view>
@@ -37,4 +55,7 @@
             <point key="canvasLocation" x="52" y="375"/>
         </scene>
     </scenes>
+    <resources>
+        <image name="LaunchIcon" width="1024" height="1024"/>
+    </resources>
 </document>
