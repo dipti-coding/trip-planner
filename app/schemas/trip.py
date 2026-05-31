@@ -21,5 +21,8 @@ class TripResponse(BaseModel):
     end_date: date
     created_at: datetime
     updated_at: datetime
+    plan_count: int = 0
+    scheduled_count: int = 0
+    percent_planned: int = 0
 
     model_config = {"from_attributes": True}

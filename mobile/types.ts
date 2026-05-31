@@ -4,6 +4,9 @@ export type Trip = {
   destination_city: string;
   start_date: string;
   end_date: string;
+  plan_count: number;
+  scheduled_count: number;
+  percent_planned: number;
 };
 
 export type Plan = {
