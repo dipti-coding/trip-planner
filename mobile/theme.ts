@@ -52,6 +52,16 @@ export const colors = {
   tabBar: 'rgba(247,247,247,0.82)',
 } as const;
 
+// Categorical gradient colors for plan types — each pair is [tint, base] for LinearGradient
+export const planColors = {
+  flight:  {base: '#0f62fe', tint: '#4589ff'},  // matches colors.accent
+  hotel:   {base: '#8a3ffc', tint: '#be95ff'},
+  food:    {base: '#d2691e', tint: '#f1a266'},
+  nature:  {base: '#198038', tint: '#42be65'},  // matches colors.success
+  event:   {base: '#da1e28', tint: '#ff8389'},  // matches colors.danger
+  neutral: {base: '#525252', tint: '#8d8d8d'},  // matches colors.textSecondary / textTertiary
+} as const;
+
 export const typography = {
   fontSans: 'IBM Plex Sans',
   fontMono: 'IBM Plex Mono',

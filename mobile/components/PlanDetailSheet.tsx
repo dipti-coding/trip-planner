@@ -14,7 +14,18 @@ import {TYPE_META, DEFAULT_META} from '../assets/planTypes';
 import Icon from './Icon';
 import type {Plan} from '../types';
 import {fmtTime, fmtDuration} from '../utils/dates';
+import {getPlanLines, getDetailRows, getMapsQuery} from '../utils/planLines';
 import {colors, radii, spacing, typography} from '../theme';
+
+// Glass / overlay compositing values — not part of the design-system token set
+const HERO_SCRIM       = ['rgba(0,0,0,0)', 'rgba(0,0,0,0.52)'];
+const OVERLAY_BG       = 'rgba(0,0,0,0.45)';
+const HANDLE_COLOR     = 'rgba(255,255,255,0.70)';
+const CLOSE_BTN_BG     = 'rgba(0,0,0,0.35)';
+const CHIP_BG          = 'rgba(255,255,255,0.92)';
+const CHIP_BORDER      = 'rgba(255,255,255,0.35)';
+const HERO_TIME_COLOR  = 'rgba(255,255,255,0.82)';
+const HERO_SUB_COLOR   = 'rgba(255,255,255,0.88)';
 
 type Props = {
   plan: Plan | null;
@@ -22,133 +33,139 @@ type Props = {
   onDelete: (id: string) => void;
 };
 
-function DetailRow({icon, label, value}: {icon: string; label: string; value: string}) {
-  return (
-    <View style={styles.detailRow}>
-      <Icon name={icon} size={18} color={colors.textSecondary}/>
-      <Text style={styles.detailLabel}>{label}</Text>
-      <Text style={styles.detailValue}>{value}</Text>
-    </View>
-  );
-}
-
-function LinkRow({icon, label, url}: {icon: string; label: string; url: string}) {
-  return (
-    <TouchableOpacity style={styles.linkRow} onPress={() => Linking.openURL(url)} activeOpacity={0.7}>
-      <Icon name={icon} size={18} color={colors.textSecondary}/>
-      <Text style={styles.linkLabel}>{label}</Text>
-      <Icon name="arrow-up-right" size={16} color={colors.textTertiary}/>
-    </TouchableOpacity>
-  );
-}
-
 export default function PlanDetailSheet({plan, onClose, onDelete}: Props) {
   if (!plan) return null;
 
   const meta = TYPE_META[plan.type] ?? DEFAULT_META;
   const time = fmtTime(plan.start_datetime);
   const dur = fmtDuration(plan.start_datetime, plan.end_datetime);
-
-  const d = plan.details ?? {};
-  const address = d.address as string | undefined;
-  const phone = d.phone as string | undefined;
-  const hours = d.hours as string | undefined;
-  const url = d.url as string | undefined;
+  const {heading, company} = getPlanLines(plan);
+  const rows = getDetailRows(plan);
+  const mapsQuery = getMapsQuery(plan);
+  const meetingLink = (plan.details as Record<string, any>).meeting_link as string | undefined;
 
   return (
-    <Modal visible={!!plan} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal visible animationType="slide" transparent onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={() => {}}>
-          {/* Drag handle */}
-          <View style={styles.handle} />
-
           <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
             {/* Hero */}
             <View style={styles.hero}>
-              <LinearGradient colors={[meta.color, '#1a1a2e']} style={StyleSheet.absoluteFill} />
               <LinearGradient
-                colors={['rgba(0,0,0,0.0)', 'rgba(0,0,0,0.6)']}
+                colors={meta.bg}
+                start={{x: 0, y: 0}}
+                end={{x: 1, y: 1}}
                 style={StyleSheet.absoluteFill}
               />
-              {/* Close button */}
-              <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-                <Icon name="x" size={18} color={colors.surface} stroke={2}/>
-              </TouchableOpacity>
-              {/* Type badge */}
-              <View style={styles.typeBadge}>
-                <Text style={styles.typeBadgeText}>{plan.type}</Text>
+              {/* Dark scrim for text legibility */}
+              <LinearGradient
+                colors={HERO_SCRIM}
+                style={StyleSheet.absoluteFill}
+              />
+              {/* Watermark icon */}
+              <View style={styles.watermark} pointerEvents="none">
+                <Icon name={meta.icon} size={84} color={colors.surface}/>
               </View>
-              {/* Title overlay */}
+              {/* Drag handle */}
+              <View style={styles.handle}/>
+              {/* Top row: close + type chip */}
+              <View style={styles.heroTopRow}>
+                <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+                  <Icon name="x" size={18} color={colors.surface} stroke={2}/>
+                </TouchableOpacity>
+                <View style={[styles.typeChip, {borderColor: CHIP_BORDER}]}>
+                  <Icon name={meta.icon} size={12} color={meta.color}/>
+                  <Text style={[styles.typeChipText, {color: meta.color}]}>{plan.type}</Text>
+                </View>
+              </View>
+              {/* Bottom overlay: time · duration, heading, company */}
               <View style={styles.heroContent}>
-                <Text style={styles.heroTime}>
-                  {time}{dur ? `  ·  ${dur}` : ''}
-                </Text>
-                <Text style={styles.heroTitle}>{plan.title}</Text>
+                {(time || dur) ? (
+                  <Text style={styles.heroTime}>
+                    {[time, dur].filter(Boolean).join('  ·  ')}
+                  </Text>
+                ) : null}
+                <Text style={styles.heroHeading} numberOfLines={2}>{heading}</Text>
+                {company ? <Text style={styles.heroCompany} numberOfLines={1}>{company}</Text> : null}
               </View>
             </View>
 
             {/* Action buttons */}
-            <View style={styles.actions}>
-              {address && (
-                <TouchableOpacity
-                  style={styles.actionPrimary}
-                  onPress={() => Linking.openURL(`maps://?q=${encodeURIComponent(address)}`)}
-                  activeOpacity={0.8}>
-                  <Icon name="map-pin" size={16} color={colors.surface}/>
-                  <Text style={styles.actionPrimaryText}>Directions</Text>
-                </TouchableOpacity>
-              )}
-              {phone && (
-                <TouchableOpacity
-                  style={styles.actionSecondary}
-                  onPress={() => Linking.openURL(`tel:${phone}`)}
-                  activeOpacity={0.8}>
-                  <Icon name="share" size={16} color={colors.textPrimary}/>
-                  <Text style={styles.actionSecondaryText}>Call</Text>
-                </TouchableOpacity>
-              )}
-              {url && (
-                <TouchableOpacity
-                  style={styles.actionSecondary}
-                  onPress={() => Linking.openURL(url)}
-                  activeOpacity={0.8}>
-                  <Icon name="globe" size={16} color={colors.textPrimary}/>
-                  <Text style={styles.actionSecondaryText}>Site</Text>
-                </TouchableOpacity>
-              )}
-            </View>
+            {(mapsQuery || meetingLink) ? (
+              <View style={styles.actions}>
+                {mapsQuery ? (
+                  <TouchableOpacity
+                    style={styles.actionPrimary}
+                    onPress={() => Linking.openURL(`maps://?q=${encodeURIComponent(mapsQuery)}`)}
+                    activeOpacity={0.8}>
+                    <Icon name="map-pin" size={16} color={colors.surface}/>
+                    <Text style={styles.actionPrimaryText}>Directions</Text>
+                  </TouchableOpacity>
+                ) : null}
+                {meetingLink ? (
+                  <TouchableOpacity
+                    style={styles.actionPrimary}
+                    onPress={() => Linking.openURL(meetingLink)}
+                    activeOpacity={0.8}>
+                    <Icon name="globe" size={16} color={colors.surface}/>
+                    <Text style={styles.actionPrimaryText}>Join</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            ) : null}
 
             {/* Detail rows */}
-            {(address || hours || phone) && (
-              <View style={styles.detailSection}>
-                {address && <DetailRow icon="map-pin" label="Address" value={address} />}
-                {hours && <DetailRow icon="clock" label="Hours" value={hours} />}
-                {phone && <DetailRow icon="share" label="Phone" value={phone} />}
+            {rows.length > 0 ? (
+              <View style={styles.detailCard}>
+                {rows.map((row, i) => (
+                  <View
+                    key={i}
+                    style={[styles.detailRow, i === 0 && styles.detailRowFirst]}>
+                    <Icon name={row.icon} size={16} color={colors.textTertiary}/>
+                    <Text style={styles.detailLabel}>{row.label}</Text>
+                    <Text
+                      style={[styles.detailValue, row.mono && styles.detailValueMono]}
+                      numberOfLines={2}>
+                      {row.value}
+                    </Text>
+                  </View>
+                ))}
               </View>
-            )}
+            ) : null}
 
             {/* Link rows */}
             <View style={styles.linkSection}>
-              {url && <LinkRow icon="globe" label={url.replace(/^https?:\/\//, '')} url={url} />}
-              <LinkRow
-                icon="calendar"
-                label="Add to calendar"
-                url={`calshow:${new Date(plan.start_datetime ?? '').getTime() / 1000}`}
-              />
+              {plan.start_datetime ? (
+                <TouchableOpacity
+                  style={styles.linkRow}
+                  onPress={() =>
+                    Linking.openURL(
+                      `calshow:${new Date(plan.start_datetime!).getTime() / 1000}`,
+                    )
+                  }
+                  activeOpacity={0.7}>
+                  <View style={styles.linkIcon}>
+                    <Icon name="calendar" size={14} color={colors.textSecondary}/>
+                  </View>
+                  <Text style={styles.linkLabel}>Add to calendar</Text>
+                  <Icon name="arrow-up-right" size={15} color={colors.textTertiary}/>
+                </TouchableOpacity>
+              ) : null}
             </View>
 
             {/* Bottom actions */}
             <View style={styles.bottomActions}>
-              <TouchableOpacity style={styles.editBtn} activeOpacity={0.7}>
+              <TouchableOpacity style={styles.bottomBtn} activeOpacity={0.7}>
                 <Icon name="edit" size={16} color={colors.textPrimary}/>
-                <Text style={styles.editBtnText}>Edit</Text>
+                <Text style={styles.bottomBtnText}>Edit</Text>
               </TouchableOpacity>
+              <View style={styles.bottomDivider}/>
               <TouchableOpacity
-                style={styles.removeBtn}
+                style={styles.bottomBtn}
                 onPress={() => { onDelete(plan.id); onClose(); }}
                 activeOpacity={0.7}>
                 <Icon name="x" size={16} color={colors.danger}/>
-                <Text style={styles.removeBtnText}>Remove</Text>
+                <Text style={[styles.bottomBtnText, {color: colors.danger}]}>Remove</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -159,7 +176,7 @@ export default function PlanDetailSheet({plan, onClose, onDelete}: Props) {
 }
 
 const styles = StyleSheet.create({
-  overlay: {flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)'},
+  overlay: {flex: 1, justifyContent: 'flex-end', backgroundColor: OVERLAY_BG},
   sheet: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: 24,
@@ -167,91 +184,109 @@ const styles = StyleSheet.create({
     maxHeight: '88%',
     overflow: 'hidden',
   },
-  handle: {
-    width: 36, height: 4, borderRadius: 2,
-    backgroundColor: colors.border,
-    alignSelf: 'center', marginTop: 12, marginBottom: 0,
-    position: 'absolute', top: 0, zIndex: 10,
-  },
 
   // Hero
   hero: {height: 220, justifyContent: 'flex-end'},
+  watermark: {
+    position: 'absolute', right: 20, bottom: 20, opacity: 0.25,
+  },
+  handle: {
+    position: 'absolute', top: 12, alignSelf: 'center',
+    width: 36, height: 4, borderRadius: 2,
+    backgroundColor: HANDLE_COLOR,
+    zIndex: 2,
+    // alignSelf doesn't work on absolute; center via left/right
+    left: '50%',
+    marginLeft: -18,
+  },
+  heroTopRow: {
+    position: 'absolute', top: 16, left: 16, right: 16,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    zIndex: 2,
+  },
   closeBtn: {
-    position: 'absolute', top: 16, left: 16,
     width: 32, height: 32, borderRadius: radii.chip,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: CLOSE_BTN_BG,
     alignItems: 'center', justifyContent: 'center',
-    zIndex: 2,
   },
-  typeBadge: {
-    position: 'absolute', top: 16, right: 16,
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    borderRadius: radii.chip, paddingHorizontal: 10, paddingVertical: 4,
-    zIndex: 2,
+  typeChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: CHIP_BG,
+    borderRadius: radii.chip,
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderWidth: 0.5,
   },
-  typeBadgeText: {fontSize: typography.sm, color: colors.surface, fontWeight: typography.medium},
+  typeChipText: {fontSize: typography.sm, fontWeight: typography.semibold},
   heroContent: {padding: spacing.xl, zIndex: 1},
-  heroTime: {fontSize: typography.bodySmall, color: 'rgba(255,255,255,0.8)', marginBottom: 4},
-  heroTitle: {
-    fontSize: typography['2xl'],
-    fontWeight: typography.semibold,
-    color: colors.surface,
-    letterSpacing: -0.2,
+  heroTime: {
+    fontSize: typography.bodySmall, color: HERO_TIME_COLOR, marginBottom: 4,
+  },
+  heroHeading: {
+    fontSize: 26, fontWeight: typography.semibold,
+    color: colors.surface, letterSpacing: -0.3, lineHeight: 32,
+  },
+  heroCompany: {
+    fontSize: typography.base, color: HERO_SUB_COLOR, marginTop: 4,
   },
 
   // Actions
   actions: {
     flexDirection: 'row', gap: spacing.md,
-    paddingHorizontal: spacing.xl, paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.md,
   },
   actionPrimary: {
     flex: 1, backgroundColor: colors.accent,
-    borderRadius: radii.md, paddingVertical: 10,
+    borderRadius: radii.xl, paddingVertical: 12,
     alignItems: 'center', justifyContent: 'center',
     flexDirection: 'row', gap: spacing.sm,
   },
   actionPrimaryText: {fontSize: typography.base, color: colors.surface, fontWeight: typography.medium},
-  actionSecondary: {
-    paddingHorizontal: spacing.xl, paddingVertical: 10,
-    borderRadius: radii.md,
-    borderWidth: 1, borderColor: colors.border,
-    alignItems: 'center', justifyContent: 'center',
-    flexDirection: 'row', gap: spacing.sm,
-  },
-  actionSecondaryText: {fontSize: typography.base, color: colors.textPrimary},
 
-  // Detail rows
-  detailSection: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    paddingHorizontal: spacing.xl,
+  // Detail card
+  detailCard: {
+    marginHorizontal: spacing.xl,
+    marginTop: spacing.xl,
+    backgroundColor: colors.surface,
+    borderRadius: radii.row,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
   },
   detailRow: {
     flexDirection: 'row', alignItems: 'center',
-    paddingVertical: spacing.lg,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
+    paddingVertical: 13, paddingHorizontal: spacing.xl,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
     gap: spacing.lg,
   },
+  detailRowFirst: {borderTopWidth: 0},
   detailLabel: {
-    flex: 1, fontSize: typography.base,
-    color: colors.textSecondary,
+    width: 104, fontSize: typography.bodySmall,
+    color: colors.textSecondary, flexShrink: 0,
   },
-  detailValue: {fontSize: typography.base, color: colors.textPrimary, textAlign: 'right', flex: 1},
+  detailValue: {
+    flex: 1, fontSize: typography.bodySmall,
+    color: colors.textPrimary, fontWeight: typography.medium,
+    textAlign: 'right',
+  },
+  detailValueMono: {fontFamily: typography.fontMono, letterSpacing: 0.3},
 
   // Link rows
   linkSection: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    paddingHorizontal: spacing.xl,
-    marginTop: spacing.md,
+    marginHorizontal: spacing.xl, marginTop: spacing.lg,
+    gap: spacing.sm,
   },
   linkRow: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingVertical: spacing.lg,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
-    gap: spacing.lg,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radii.xl, borderWidth: 1, borderColor: colors.border,
+    paddingHorizontal: 14, paddingVertical: 12,
   },
-  linkLabel: {flex: 1, fontSize: typography.base, color: colors.textPrimary},
+  linkIcon: {
+    width: 22, height: 22, borderRadius: 6,
+    backgroundColor: colors.bgBase3,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  linkLabel: {flex: 1, fontSize: typography.base, fontWeight: typography.medium, color: colors.textPrimary},
 
   // Bottom actions
   bottomActions: {
@@ -260,17 +295,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
     paddingBottom: 34,
   },
-  editBtn: {
-    flex: 1, paddingVertical: spacing.xl,
-    alignItems: 'center', justifyContent: 'center',
-    borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: colors.border,
-    flexDirection: 'row', gap: spacing.sm,
-  },
-  editBtnText: {fontSize: typography.base, color: colors.textPrimary},
-  removeBtn: {
+  bottomBtn: {
     flex: 1, paddingVertical: spacing.xl,
     alignItems: 'center', justifyContent: 'center',
     flexDirection: 'row', gap: spacing.sm,
   },
-  removeBtnText: {fontSize: typography.base, color: colors.danger},
+  bottomDivider: {width: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginVertical: 8},
+  bottomBtnText: {fontSize: typography.base, color: colors.textPrimary},
 });
