@@ -25,8 +25,12 @@ export default function SplashScreen() {
 }
 
 const styles = StyleSheet.create({
+  // position:absolute + inset:0 fills the RN root regardless of parent flex.
+  // flex:1 alone requires a parent with an explicit height, which ThemeProvider
+  // doesn't guarantee.
   container: {
-    flex: 1,
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: '#000',
     alignItems: 'center',
     justifyContent: 'center',
