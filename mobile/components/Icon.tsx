@@ -10,7 +10,9 @@ interface IconProps {
 }
 
 export default function Icon({name, size = 20, stroke = 1.6, color = colors.textPrimary}: IconProps) {
-  const dim = {width: size, height: size, viewBox: '0 0 24 24'} as const;
+  // backgroundColor: transparent prevents react-native-svg from rendering
+  // a white backing layer on iOS, which shows as a border around icons.
+  const dim = {width: size, height: size, viewBox: '0 0 24 24', style: {backgroundColor: 'transparent'}};
   const lc = 'round' as const;
   const lj = 'round' as const;
   const sw = stroke;
