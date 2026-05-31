@@ -4,7 +4,7 @@
  * preserveAspectRatio="xMidYMid slice" matches cover-image behaviour: fills
  * without distortion, crops symmetrically if the container is narrower than 360.
  */
-import React, {useMemo} from 'react';
+import React from 'react';
 import {StyleSheet} from 'react-native';
 import Svg, {
   Circle,
@@ -24,7 +24,7 @@ import type {DestinationType} from '../utils/destinations';
 // ─── City ────────────────────────────────────────────────────────────────────
 
 function CityCover() {
-  const id = useMemo(() => 'wc' + Math.random().toString(36).slice(2, 6), []);
+  const id = 'dest-city';
   return (
     <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" viewBox="0 0 360 140" preserveAspectRatio="xMidYMid slice">
       <Defs>
@@ -88,7 +88,7 @@ function CityCover() {
 // ─── Beach ────────────────────────────────────────────────────────────────────
 
 function BeachCover() {
-  const id = useMemo(() => 'wb' + Math.random().toString(36).slice(2, 6), []);
+  const id = 'dest-beach';
   return (
     <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" viewBox="0 0 360 140" preserveAspectRatio="xMidYMid slice">
       <Defs>
@@ -130,7 +130,7 @@ function BeachCover() {
 // ─── Island ───────────────────────────────────────────────────────────────────
 
 function IslandCover() {
-  const id = useMemo(() => 'wi' + Math.random().toString(36).slice(2, 6), []);
+  const id = 'dest-island';
   return (
     <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" viewBox="0 0 360 140" preserveAspectRatio="xMidYMid slice">
       <Defs>
@@ -178,8 +178,13 @@ function IslandCover() {
 
 // ─── Mountain ─────────────────────────────────────────────────────────────────
 
+const MOUNTAIN_STARS: [number, number, number][] = [
+  [30,14,0.8],[70,8,0.65],[122,18,0.7],[182,10,0.55],
+  [222,16,0.7],[262,7,0.65],[312,13,0.75],[50,24,0.5],[344,22,0.6],
+];
+
 function MountainCover() {
-  const id = useMemo(() => 'wm' + Math.random().toString(36).slice(2, 6), []);
+  const id = 'dest-mountain';
   return (
     <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" viewBox="0 0 360 140" preserveAspectRatio="xMidYMid slice">
       <Defs>
@@ -199,7 +204,7 @@ function MountainCover() {
       {/* Aurora */}
       <Rect x="0" y="28" width="360" height="26" fill={`url(#${id}aur)`} />
       {/* Stars */}
-      {([[30,14,0.8],[70,8,0.65],[122,18,0.7],[182,10,0.55],[222,16,0.7],[262,7,0.65],[312,13,0.75],[50,24,0.5],[344,22,0.6]] as [number,number,number][]).map(([x,y,o],i) => (
+      {MOUNTAIN_STARS.map(([x,y,o],i) => (
         <Circle key={i} cx={x} cy={y} r="0.8" fill="white" opacity={o} />
       ))}
       {/* Back range */}
@@ -226,8 +231,11 @@ function MountainCover() {
 
 // ─── Nature ───────────────────────────────────────────────────────────────────
 
+const NATURE_BACK_TREES: [number, number][] = [[38,100],[88,90],[198,84],[278,92],[328,88]];
+const NATURE_FRONT_TREES: [number, number][] = [[18,118],[68,112],[148,108],[228,114],[308,110],[352,116]];
+
 function NatureCover() {
-  const id = useMemo(() => 'wn' + Math.random().toString(36).slice(2, 6), []);
+  const id = 'dest-nature';
   return (
     <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" viewBox="0 0 360 140" preserveAspectRatio="xMidYMid slice">
       <Defs>
@@ -246,7 +254,7 @@ function NatureCover() {
       <Path d="M0 122 Q48 92,108 107 Q168 122,218 97 Q272 74,328 102 L360 110 L360 140 L0 140 Z" fill="#15803D" />
       {/* Back conifers */}
       <G fill="#14532D" opacity="0.65">
-        {([[38,100],[88,90],[198,84],[278,92],[328,88]] as [number,number][]).map(([x,y],i) => (
+        {NATURE_BACK_TREES.map(([x,y],i) => (
           <G key={i}>
             <Polygon points={`${x},${y+16} ${x-7},${y+16} ${x},${y}`} />
             <Polygon points={`${x},${y+8} ${x-9},${y+14} ${x+9},${y+14}`} />
@@ -258,7 +266,7 @@ function NatureCover() {
       <Path d="M0 132 Q60 124,120 130 Q180 136,240 126 Q300 116,360 128 L360 140 L0 140 Z" fill="#14532D" />
       {/* Front conifers */}
       <G fill="#166534">
-        {([[18,118],[68,112],[148,108],[228,114],[308,110],[352,116]] as [number,number][]).map(([x,y],i) => (
+        {NATURE_FRONT_TREES.map(([x,y],i) => (
           <G key={i}>
             <Polygon points={`${x},${y+18} ${x-8},${y+18} ${x},${y}`} />
             <Polygon points={`${x},${y+10} ${x-10},${y+16} ${x+10},${y+16}`} />
@@ -274,9 +282,11 @@ function NatureCover() {
 
 // ─── Historical ───────────────────────────────────────────────────────────────
 
+const HISTORICAL_COLUMN_XS = [94, 122, 150, 178, 206, 234, 262];
+
 function HistoricalCover() {
-  const id = useMemo(() => 'wh' + Math.random().toString(36).slice(2, 6), []);
-  const columnXs = [94, 122, 150, 178, 206, 234, 262];
+  const id = 'dest-historical';
+  const columnXs = HISTORICAL_COLUMN_XS;
   return (
     <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" viewBox="0 0 360 140" preserveAspectRatio="xMidYMid slice">
       <Defs>
@@ -341,7 +351,7 @@ function HistoricalCover() {
 // Aerial sunset — window-seat view. Works for any destination type.
 
 function WanderCover() {
-  const id = useMemo(() => 'ww' + Math.random().toString(36).slice(2, 6), []);
+  const id = 'dest-wander';
   return (
     <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" viewBox="0 0 360 140" preserveAspectRatio="xMidYMid slice">
       <Defs>
@@ -399,7 +409,7 @@ function WanderCover() {
 
 // ─── Dispatcher ───────────────────────────────────────────────────────────────
 
-export function DestinationCover({type}: {type: DestinationType}) {
+export const DestinationCover = React.memo(function DestinationCover({type}: {type: DestinationType}) {
   switch (type) {
     case 'city':       return <CityCover />;
     case 'beach':      return <BeachCover />;
@@ -409,4 +419,4 @@ export function DestinationCover({type}: {type: DestinationType}) {
     case 'historical': return <HistoricalCover />;
     default:           return <WanderCover />;
   }
-}
+});
