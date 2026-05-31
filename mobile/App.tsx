@@ -1,5 +1,5 @@
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import {NavigationContainer} from '@react-navigation/native';
+import {getFocusedRouteNameFromRoute, NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import React from 'react';
 import {Platform, StyleSheet} from 'react-native';
@@ -54,7 +54,15 @@ export default function App() {
           tabBarInactiveTintColor: colors.textTertiary,
           tabBarLabelStyle: styles.tabLabel,
         })}>
-        <Tab.Screen name="Trips" component={TripsStack} />
+        <Tab.Screen
+          name="Trips"
+          component={TripsStack}
+          options={({route}) => ({
+            tabBarStyle: getFocusedRouteNameFromRoute(route) === 'TripDetail'
+              ? {display: 'none'}
+              : styles.tabBar,
+          })}
+        />
         <Tab.Screen name="Documents" component={DocumentsScreen} />
         <Tab.Screen name="Account" component={AccountScreen} />
       </Tab.Navigator>

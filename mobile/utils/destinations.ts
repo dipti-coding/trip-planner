@@ -1,6 +1,3 @@
-import type {ImageSourcePropType} from 'react-native';
-import {getImage, getFallback} from '../assets/destinations/index';
-
 export type DestinationType =
   | 'city'
   | 'beach'
@@ -90,11 +87,3 @@ export function findDestination(cityString: string): Destination | null {
   );
 }
 
-export function getDestinationImage(
-  dest: Destination | null,
-): ImageSourcePropType | null {
-  const specific = getImage(dest?.image ?? null);
-  if (specific != null) return specific as unknown as ImageSourcePropType;
-  const fallback = getFallback(dest?.type ?? 'other');
-  return fallback != null ? (fallback as unknown as ImageSourcePropType) : null;
-}
