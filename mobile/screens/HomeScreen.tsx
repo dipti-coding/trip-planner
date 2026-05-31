@@ -79,6 +79,7 @@ function TripCard({trip, onPress}: {trip: TripWithStatus; onPress: () => void}) 
   const scrim: string[] = ['rgba(0,0,0,0.55)', 'rgba(0,0,0,0.15)', 'rgba(0,0,0,0.15)', 'rgba(0,0,0,0.7)'];
   const dest = findDestination(trip.destination_city);
   const tint = tripTint(trip.id);
+  const pct = trip.percent_planned;
   return (
     <TouchableOpacity style={styles.tripCard} onPress={onPress} activeOpacity={0.85}>
       <View style={styles.cover}>
@@ -104,12 +105,12 @@ function TripCard({trip, onPress}: {trip: TripWithStatus; onPress: () => void}) 
       </View>
       <View style={styles.cardBottom}>
         <View style={styles.metaItem}><Icon name="calendar" size={13} color={colors.textSecondary}/><Text style={styles.metaText}>{days} days</Text></View>
-        <View style={styles.metaItem}><Icon name="map-pin" size={13} color={colors.textSecondary}/><Text style={styles.metaText}>0 plans</Text></View>
+        <View style={styles.metaItem}><Icon name="map-pin" size={13} color={colors.textSecondary}/><Text style={styles.metaText}>{trip.plan_count} plan{trip.plan_count !== 1 ? 's' : ''}</Text></View>
         <View style={styles.progressWrap}>
           <View style={styles.progressTrack}>
-            <View style={[styles.progressBar, {width: '0%'}]} />
+            <View style={[styles.progressBar, {width: `${pct}%`}]} />
           </View>
-          <Text style={styles.progressLabel}>0% planned</Text>
+          <Text style={styles.progressLabel}>{pct}% planned</Text>
         </View>
       </View>
     </TouchableOpacity>
