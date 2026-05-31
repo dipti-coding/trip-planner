@@ -22,6 +22,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import client from '../api/client';
 import Icon from '../components/Icon';
 import {DestinationCover} from '../components/DestinationCovers';
+import {PlaneSpinner} from '../components/Spinner';
 import {useTheme} from '../context/ThemeContext';
 import type {Trip} from '../types';
 import {dayCount, fmtShort, tripStatus} from '../utils/dates';
@@ -484,7 +485,7 @@ export default function HomeScreen({navigation}: Props) {
     ];
   }, [trips, query]);
 
-  if (loading) return <SafeAreaView style={s.container}><ActivityIndicator size="large" color={colors.accent}/></SafeAreaView>;
+  if (loading) return <SafeAreaView style={s.container}><PlaneSpinner/></SafeAreaView>;
   if (error)   return (
     <SafeAreaView style={s.container}>
       <Text style={s.errorText}>{error}</Text>
