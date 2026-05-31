@@ -22,6 +22,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     reactNativeFactory = factory
 
     window = UIWindow(frame: UIScreen.main.bounds)
+    // Match the splash screen background so no white flash appears at the
+    // screen edges before the React Native root view finishes its first layout.
+    window?.backgroundColor = UIColor.black
 
     factory.startReactNative(
       withModuleName: "TripPlanner",
