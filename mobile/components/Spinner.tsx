@@ -39,7 +39,7 @@ export function PlaneSpinner({label = 'Loading…'}: {label?: string}) {
   const spin = rotation.interpolate({inputRange: [0, 1], outputRange: ['0deg', '360deg']});
 
   const styles = useMemo(() => StyleSheet.create({
-    stage:     {alignItems: 'center', justifyContent: 'center', gap: spacing.xl, padding: spacing['2xl']},
+    stage:     {flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.xl, padding: spacing['2xl']},
     orbitWrap: {width: ORBIT, height: ORBIT, alignItems: 'center', justifyContent: 'center'},
     // plane is pinned to the top edge of the orbit; the Animated.View rotates it around
     planeDot:  {position: 'absolute', top: -(PLANE / 2), left: ORBIT / 2 - PLANE / 2},

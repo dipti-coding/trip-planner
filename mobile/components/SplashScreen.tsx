@@ -8,10 +8,9 @@
  * size and show only the top-left corner of the artwork.
  */
 import React from 'react';
-import {Dimensions, Image, StatusBar, StyleSheet, Text, View} from 'react-native';
+import {Image, StatusBar, StyleSheet, Text, View} from 'react-native';
 
-const ICON           = require('../assets/icon.png');
-const {width, height} = Dimensions.get('screen');
+const ICON = require('../assets/icon.png');
 
 export default function SplashScreen() {
   return (
@@ -35,20 +34,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Explicit pixel dimensions make resizeMode="cover" reliable in Fabric.
+  // 100% of the positioned container fills the root view reliably without
+  // depending on Dimensions values matching the actual root view size.
   bg: {
     position: 'absolute',
     top: 0,
     left: 0,
-    width,
-    height,
+    width: '100%',
+    height: '100%',
   },
   overlay: {
     position: 'absolute',
     top: 0,
     left: 0,
-    width,
-    height,
+    width: '100%',
+    height: '100%',
     backgroundColor: 'rgba(0,0,0,0.35)',
   },
   name: {
