@@ -2,19 +2,22 @@
  * JS-side splash screen — shown while ThemeProvider reads the persisted
  * theme from AsyncStorage (typically <100 ms).
  *
- * The icon PNG is displayed full-bleed (resizeMode="cover"), so its opaque
- * white corners are pushed off-screen and the mountain artwork fills the
- * frame. A dark overlay preserves text legibility.
+ * Uses explicit Dimensions values for the background Image so that
+ * resizeMode="cover" fires reliably in React Native Fabric. With
+ * StyleSheet.absoluteFill the Image can render at its natural 1024×1024 pt
+ * size and show only the top-left corner of the artwork.
  */
 import React from 'react';
-import {Image, StyleSheet, Text, View} from 'react-native';
+import {Dimensions, Image, StatusBar, StyleSheet, Text, View} from 'react-native';
 
-const ICON = require('../assets/icon.png');
+const ICON           = require('../assets/icon.png');
+const {width, height} = Dimensions.get('screen');
 
 export default function SplashScreen() {
   return (
     <View style={styles.container}>
-      <Image source={ICON} style={StyleSheet.absoluteFill} resizeMode="cover"/>
+      <StatusBar translucent backgroundColor="transparent" barStyle="light-content"/>
+      <Image source={ICON} style={styles.bg} resizeMode="cover"/>
       <View style={styles.overlay}/>
       <Text style={styles.name}>wandur</Text>
     </View>
@@ -28,8 +31,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Explicit pixel dimensions make resizeMode="cover" reliable in Fabric.
+  bg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width,
+    height,
+  },
   overlay: {
-    ...StyleSheet.absoluteFill,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width,
+    height,
     backgroundColor: 'rgba(0,0,0,0.35)',
   },
   name: {
