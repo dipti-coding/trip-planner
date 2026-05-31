@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useMemo} from 'react';
 import {
   Linking,
   Modal,
@@ -10,19 +10,12 @@ import {
   View,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import {TYPE_META, DEFAULT_META} from '../assets/planTypes';
 import Icon from './Icon';
+import {useTheme} from '../context/ThemeContext';
 import type {Plan} from '../types';
 import {fmtTime, fmtDuration} from '../utils/dates';
 import {getPlanLines, getDetailRows, getMapsQuery} from '../utils/planLines';
-import {colors, radii, spacing, typography} from '../theme';
-
-// Glass / overlay compositing values — not part of the design-system token set
-const OVERLAY_BG       = 'rgba(0,0,0,0.45)';
-const HANDLE_COLOR     = 'rgba(255,255,255,0.70)';
-const CLOSE_BTN_BG     = 'rgba(0,0,0,0.35)';
-const CHIP_BG          = 'rgba(255,255,255,0.92)';
-const CHIP_BORDER      = 'rgba(255,255,255,0.35)';
+import {radii, spacing, typography} from '../theme';
 
 type Props = {
   plan: Plan | null;
@@ -31,13 +24,94 @@ type Props = {
 };
 
 export default function PlanDetailSheet({plan, onClose, onDelete}: Props) {
+  const {theme, colors, glass, primary, typeMeta, defaultMeta} = useTheme();
+
+  const styles = useMemo(() => StyleSheet.create({
+    overlay: {flex: 1, justifyContent: 'flex-end', backgroundColor: glass.modalBg},
+    sheet: {
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: 24, borderTopRightRadius: 24,
+      maxHeight: '88%', overflow: 'hidden',
+    },
+    hero:      {height: 220, justifyContent: 'flex-end'},
+    watermark: {position: 'absolute', right: 20, bottom: 20, opacity: 1},
+    handle: {
+      position: 'absolute', top: 12, alignSelf: 'center',
+      width: 36, height: 4, borderRadius: 2,
+      backgroundColor: glass.textTertiary,
+      zIndex: 2, left: '50%', marginLeft: -18,
+    },
+    heroTopRow: {
+      position: 'absolute', top: 16, left: 16, right: 16,
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', zIndex: 2,
+    },
+    closeBtn: {
+      width: 32, height: 32, borderRadius: radii.chip,
+      backgroundColor: glass.closeBtnBg, alignItems: 'center', justifyContent: 'center',
+    },
+    typeChip: {
+      flexDirection: 'row', alignItems: 'center', gap: 5,
+      backgroundColor: glass.chipBg, borderRadius: radii.chip,
+      paddingHorizontal: 10, paddingVertical: 4, borderWidth: 0.5,
+    },
+    typeChipText: {fontSize: typography.sm, fontWeight: typography.semibold},
+    heroContent:  {padding: spacing.xl, zIndex: 1},
+    heroTime:     {fontSize: typography.bodySmall, color: colors.textSecondary, marginBottom: 4},
+    heroHeading:  {fontSize: 26, fontWeight: typography.semibold, color: colors.textPrimary, letterSpacing: -0.3, lineHeight: 32},
+    heroCompany:  {fontSize: typography.base, color: colors.textSecondary, marginTop: 4},
+    actions: {
+      flexDirection: 'row', gap: spacing.md,
+      paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.md,
+    },
+    actionPrimary: {
+      flex: 1, backgroundColor: colors.accent,
+      borderRadius: radii.xl, paddingVertical: 12,
+      alignItems: 'center', justifyContent: 'center',
+      flexDirection: 'row', gap: spacing.sm,
+    },
+    actionPrimaryText: {fontSize: typography.base, color: glass.textPrimary, fontWeight: typography.medium},
+    detailCard: {
+      marginHorizontal: spacing.xl, marginTop: spacing.xl,
+      backgroundColor: colors.surface, borderRadius: radii.row,
+      borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+    },
+    detailRow: {
+      flexDirection: 'row', alignItems: 'center',
+      paddingVertical: 13, paddingHorizontal: spacing.xl,
+      borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, gap: spacing.lg,
+    },
+    detailRowFirst:    {borderTopWidth: 0},
+    detailLabel:       {width: 104, fontSize: typography.bodySmall, color: colors.textSecondary, flexShrink: 0},
+    detailValue:       {flex: 1, fontSize: typography.bodySmall, color: colors.textPrimary, fontWeight: typography.medium, textAlign: 'right'},
+    detailValueMono:   {fontFamily: typography.fontMono, letterSpacing: 0.3},
+    linkSection:       {marginHorizontal: spacing.xl, marginTop: spacing.lg, gap: spacing.sm},
+    linkRow: {
+      flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+      backgroundColor: colors.surface, borderRadius: radii.xl,
+      borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, paddingVertical: 12,
+    },
+    linkIcon: {
+      width: 22, height: 22, borderRadius: 6,
+      backgroundColor: colors.bgBase3, alignItems: 'center', justifyContent: 'center',
+    },
+    linkLabel:     {flex: 1, fontSize: typography.base, fontWeight: typography.medium, color: colors.textPrimary},
+    bottomActions: {
+      flexDirection: 'row',
+      borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
+      marginTop: spacing.xl, paddingBottom: 34,
+    },
+    bottomBtn:     {flex: 1, paddingVertical: spacing.xl, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: spacing.sm},
+    bottomDivider: {width: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginVertical: 8},
+    bottomBtnText: {fontSize: typography.base, color: colors.textPrimary},
+  }), [theme]);
+
   if (!plan) return null;
 
-  const meta = TYPE_META[plan.type] ?? DEFAULT_META;
-  const time = fmtTime(plan.start_datetime);
-  const dur = fmtDuration(plan.start_datetime, plan.end_datetime);
+  const meta      = typeMeta[plan.type] ?? defaultMeta;
+  const time      = fmtTime(plan.start_datetime);
+  const dur       = fmtDuration(plan.start_datetime, plan.end_datetime);
   const {heading, company} = getPlanLines(plan);
-  const rows = getDetailRows(plan);
+  const rows      = getDetailRows(plan);
   const mapsQuery = getMapsQuery(plan);
   const meetingLink = (plan.details as Record<string, any>).meeting_link as string | undefined;
 
@@ -46,43 +120,35 @@ export default function PlanDetailSheet({plan, onClose, onDelete}: Props) {
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={() => {}}>
           <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
-            {/* Hero — gradient fades from plan type color → white */}
             <View style={styles.hero}>
               <LinearGradient
-                colors={[meta.color, '#ffffff']}
+                colors={[primary['700'], primary['50']]}
                 start={{x: 0, y: 0}}
                 end={{x: 0, y: 1}}
                 style={StyleSheet.absoluteFill}
               />
-              {/* Watermark icon */}
               <View style={styles.watermark} pointerEvents="none">
-                <Icon name={meta.icon} size={84} color="rgba(0,0,0,0.08)"/>
+                <Icon name={meta.icon} size={84} color={glass.watermark}/>
               </View>
-              {/* Drag handle */}
               <View style={styles.handle}/>
-              {/* Top row: close + type chip */}
               <View style={styles.heroTopRow}>
                 <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-                  <Icon name="x" size={18} color={colors.surface} stroke={2}/>
+                  <Icon name="x" size={18} color={glass.textPrimary} stroke={2}/>
                 </TouchableOpacity>
-                <View style={[styles.typeChip, {borderColor: CHIP_BORDER}]}>
+                <View style={[styles.typeChip, {borderColor: glass.chipBorder}]}>
                   <Icon name={meta.icon} size={12} color={meta.color}/>
                   <Text style={[styles.typeChipText, {color: meta.color}]}>{plan.type}</Text>
                 </View>
               </View>
-              {/* Bottom content: time · duration, heading, company — dark text on white */}
               <View style={styles.heroContent}>
                 {(time || dur) ? (
-                  <Text style={styles.heroTime}>
-                    {[time, dur].filter(Boolean).join('  ·  ')}
-                  </Text>
+                  <Text style={styles.heroTime}>{[time, dur].filter(Boolean).join('  ·  ')}</Text>
                 ) : null}
                 <Text style={styles.heroHeading} numberOfLines={2}>{heading}</Text>
                 {company ? <Text style={styles.heroCompany} numberOfLines={1}>{company}</Text> : null}
               </View>
             </View>
 
-            {/* Action buttons */}
             {(mapsQuery || meetingLink) ? (
               <View style={styles.actions}>
                 {mapsQuery ? (
@@ -90,7 +156,7 @@ export default function PlanDetailSheet({plan, onClose, onDelete}: Props) {
                     style={styles.actionPrimary}
                     onPress={() => Linking.openURL(`maps://?q=${encodeURIComponent(mapsQuery)}`)}
                     activeOpacity={0.8}>
-                    <Icon name="map-pin" size={16} color={colors.surface}/>
+                    <Icon name="map-pin" size={16} color={glass.textPrimary}/>
                     <Text style={styles.actionPrimaryText}>Directions</Text>
                   </TouchableOpacity>
                 ) : null}
@@ -99,25 +165,20 @@ export default function PlanDetailSheet({plan, onClose, onDelete}: Props) {
                     style={styles.actionPrimary}
                     onPress={() => Linking.openURL(meetingLink)}
                     activeOpacity={0.8}>
-                    <Icon name="globe" size={16} color={colors.surface}/>
+                    <Icon name="globe" size={16} color={glass.textPrimary}/>
                     <Text style={styles.actionPrimaryText}>Join</Text>
                   </TouchableOpacity>
                 ) : null}
               </View>
             ) : null}
 
-            {/* Detail rows */}
             {rows.length > 0 ? (
               <View style={styles.detailCard}>
                 {rows.map((row, i) => (
-                  <View
-                    key={i}
-                    style={[styles.detailRow, i === 0 && styles.detailRowFirst]}>
+                  <View key={i} style={[styles.detailRow, i === 0 && styles.detailRowFirst]}>
                     <Icon name={row.icon} size={16} color={colors.textTertiary}/>
                     <Text style={styles.detailLabel}>{row.label}</Text>
-                    <Text
-                      style={[styles.detailValue, row.mono && styles.detailValueMono]}
-                      numberOfLines={2}>
+                    <Text style={[styles.detailValue, row.mono && styles.detailValueMono]} numberOfLines={2}>
                       {row.value}
                     </Text>
                   </View>
@@ -125,16 +186,11 @@ export default function PlanDetailSheet({plan, onClose, onDelete}: Props) {
               </View>
             ) : null}
 
-            {/* Link rows */}
             <View style={styles.linkSection}>
               {plan.start_datetime ? (
                 <TouchableOpacity
                   style={styles.linkRow}
-                  onPress={() =>
-                    Linking.openURL(
-                      `calshow:${new Date(plan.start_datetime!).getTime() / 1000}`,
-                    )
-                  }
+                  onPress={() => Linking.openURL(`calshow:${new Date(plan.start_datetime!).getTime() / 1000}`)}
                   activeOpacity={0.7}>
                   <View style={styles.linkIcon}>
                     <Icon name="calendar" size={14} color={colors.textSecondary}/>
@@ -145,7 +201,6 @@ export default function PlanDetailSheet({plan, onClose, onDelete}: Props) {
               ) : null}
             </View>
 
-            {/* Bottom actions */}
             <View style={styles.bottomActions}>
               <TouchableOpacity style={styles.bottomBtn} activeOpacity={0.7}>
                 <Icon name="edit" size={16} color={colors.textPrimary}/>
@@ -166,131 +221,3 @@ export default function PlanDetailSheet({plan, onClose, onDelete}: Props) {
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  overlay: {flex: 1, justifyContent: 'flex-end', backgroundColor: OVERLAY_BG},
-  sheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '88%',
-    overflow: 'hidden',
-  },
-
-  // Hero
-  hero: {height: 220, justifyContent: 'flex-end'},
-  watermark: {
-    position: 'absolute', right: 20, bottom: 20, opacity: 1,
-  },
-  handle: {
-    position: 'absolute', top: 12, alignSelf: 'center',
-    width: 36, height: 4, borderRadius: 2,
-    backgroundColor: HANDLE_COLOR,
-    zIndex: 2,
-    left: '50%',
-    marginLeft: -18,
-  },
-  heroTopRow: {
-    position: 'absolute', top: 16, left: 16, right: 16,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    zIndex: 2,
-  },
-  closeBtn: {
-    width: 32, height: 32, borderRadius: radii.chip,
-    backgroundColor: CLOSE_BTN_BG,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  typeChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: CHIP_BG,
-    borderRadius: radii.chip,
-    paddingHorizontal: 10, paddingVertical: 4,
-    borderWidth: 0.5,
-  },
-  typeChipText: {fontSize: typography.sm, fontWeight: typography.semibold},
-  heroContent: {padding: spacing.xl, zIndex: 1},
-  heroTime: {
-    fontSize: typography.bodySmall, color: colors.textSecondary, marginBottom: 4,
-  },
-  heroHeading: {
-    fontSize: 26, fontWeight: typography.semibold,
-    color: colors.textPrimary, letterSpacing: -0.3, lineHeight: 32,
-  },
-  heroCompany: {
-    fontSize: typography.base, color: colors.textSecondary, marginTop: 4,
-  },
-
-  // Actions
-  actions: {
-    flexDirection: 'row', gap: spacing.md,
-    paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.md,
-  },
-  actionPrimary: {
-    flex: 1, backgroundColor: colors.accent,
-    borderRadius: radii.xl, paddingVertical: 12,
-    alignItems: 'center', justifyContent: 'center',
-    flexDirection: 'row', gap: spacing.sm,
-  },
-  actionPrimaryText: {fontSize: typography.base, color: colors.surface, fontWeight: typography.medium},
-
-  // Detail card
-  detailCard: {
-    marginHorizontal: spacing.xl,
-    marginTop: spacing.xl,
-    backgroundColor: colors.surface,
-    borderRadius: radii.row,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
-  },
-  detailRow: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingVertical: 13, paddingHorizontal: spacing.xl,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
-    gap: spacing.lg,
-  },
-  detailRowFirst: {borderTopWidth: 0},
-  detailLabel: {
-    width: 104, fontSize: typography.bodySmall,
-    color: colors.textSecondary, flexShrink: 0,
-  },
-  detailValue: {
-    flex: 1, fontSize: typography.bodySmall,
-    color: colors.textPrimary, fontWeight: typography.medium,
-    textAlign: 'right',
-  },
-  detailValueMono: {fontFamily: typography.fontMono, letterSpacing: 0.3},
-
-  // Link rows
-  linkSection: {
-    marginHorizontal: spacing.xl, marginTop: spacing.lg,
-    gap: spacing.sm,
-  },
-  linkRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radii.xl, borderWidth: 1, borderColor: colors.border,
-    paddingHorizontal: 14, paddingVertical: 12,
-  },
-  linkIcon: {
-    width: 22, height: 22, borderRadius: 6,
-    backgroundColor: colors.bgBase3,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  linkLabel: {flex: 1, fontSize: typography.base, fontWeight: typography.medium, color: colors.textPrimary},
-
-  // Bottom actions
-  bottomActions: {
-    flexDirection: 'row',
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
-    marginTop: spacing.xl,
-    paddingBottom: 34,
-  },
-  bottomBtn: {
-    flex: 1, paddingVertical: spacing.xl,
-    alignItems: 'center', justifyContent: 'center',
-    flexDirection: 'row', gap: spacing.sm,
-  },
-  bottomDivider: {width: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginVertical: 8},
-  bottomBtnText: {fontSize: typography.base, color: colors.textPrimary},
-});
