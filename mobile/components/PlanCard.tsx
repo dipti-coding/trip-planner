@@ -1,9 +1,11 @@
 import React from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import Icon from './Icon';
 import {TYPE_META, DEFAULT_META} from '../assets/planTypes';
 import type {Plan} from '../types';
 import {fmtTime, fmtDuration} from '../utils/dates';
+import {getPlanLines} from '../utils/planLines';
 import {colors, radii, spacing, typography} from '../theme';
 
 type Props = {
@@ -15,21 +17,28 @@ export default function PlanCard({plan, onPress}: Props) {
   const meta = TYPE_META[plan.type] ?? DEFAULT_META;
   const time = fmtTime(plan.start_datetime);
   const dur  = fmtDuration(plan.start_datetime, plan.end_datetime);
+  const {heading, company, location} = getPlanLines(plan);
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
-      <View style={[styles.badge, {backgroundColor: meta.color}]}>
-        <Icon name={meta.icon} size={18} color="#fff"/>
-      </View>
+      <LinearGradient
+        colors={meta.bg}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}
+        style={styles.thumb}>
+        <Icon name={meta.icon} size={24} color={colors.surface}/>
+      </LinearGradient>
 
       <View style={styles.content}>
-        {time && (
-          <Text style={styles.timeText}>
-            {time}
-            {dur ? <Text style={styles.durText}>{'  ·  ' + dur}</Text> : null}
-          </Text>
-        )}
-        <Text style={styles.title} numberOfLines={1}>{plan.title}</Text>
+        {time ? (
+          <View style={styles.timeRow}>
+            <Text style={styles.timeText}>{time}</Text>
+            {dur ? <Text style={styles.durText}>{' · ' + dur}</Text> : null}
+          </View>
+        ) : null}
+        <Text style={styles.heading} numberOfLines={1}>{heading}</Text>
+        {company   ? <Text style={styles.company}  numberOfLines={1}>{company}</Text>  : null}
+        {location  ? <Text style={styles.location} numberOfLines={1}>{location}</Text> : null}
       </View>
     </TouchableOpacity>
   );
@@ -46,14 +55,17 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: spacing.lg,
   },
-  badge: {
-    width: 38, height: 38,
-    borderRadius: 10,
+  thumb: {
+    width: 56, height: 56,
+    borderRadius: radii.lg,
     alignItems: 'center', justifyContent: 'center',
     flexShrink: 0,
   },
   content: {flex: 1, minWidth: 0},
-  timeText: {fontSize: typography.bodySmall, fontWeight: typography.semibold, color: colors.textSecondary, marginBottom: 3},
-  durText:  {fontSize: typography.bodySmall, fontWeight: typography.regular, color: colors.textTertiary},
-  title:    {fontSize: typography.md, fontWeight: typography.semibold, color: colors.textPrimary, letterSpacing: -0.1},
+  timeRow: {flexDirection: 'row', alignItems: 'center', marginBottom: 3},
+  timeText: {fontSize: typography.bodySmall, fontWeight: typography.semibold, color: colors.textPrimary},
+  durText:  {fontSize: typography.bodySmall, color: colors.textTertiary},
+  heading:  {fontSize: typography.md, fontWeight: typography.semibold, color: colors.textPrimary, letterSpacing: -0.1},
+  company:  {fontSize: typography.sm, color: colors.textSecondary, marginTop: 2},
+  location: {fontSize: typography.sm, color: colors.textTertiary, marginTop: 1},
 });
