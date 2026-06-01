@@ -1,26 +1,26 @@
-import {planColors} from '../theme';
+import type {PlanColorTokens} from '../theme';
 
 export type PlanTypeMeta = {color: string; icon: string; bg: string[]};
 
-/** icon values are Icon component name strings (see components/Icon.tsx) */
-export const TYPE_META: Record<string, PlanTypeMeta> = {
-  Flight:         {color: planColors.flight.base,  icon: 'plane',    bg: [planColors.flight.tint,  planColors.flight.base]},
-  Hotel:          {color: planColors.hotel.base,   icon: 'hotel',    bg: [planColors.hotel.tint,   planColors.hotel.base]},
-  Restaurant:     {color: planColors.food.base,    icon: 'fork',     bg: [planColors.food.tint,    planColors.food.base]},
-  Activity:       {color: planColors.nature.base,  icon: 'map-pin',  bg: [planColors.nature.tint,  planColors.nature.base]},
-  Tour:           {color: planColors.nature.base,  icon: 'compass',  bg: [planColors.nature.tint,  planColors.nature.base]},
-  LocalEvent:     {color: planColors.event.base,   icon: 'flag',     bg: [planColors.event.tint,   planColors.event.base]},
-  CarReservation: {color: planColors.flight.base,  icon: 'route',    bg: [planColors.flight.tint,  planColors.flight.base]},
-  RailwayRide:    {color: planColors.flight.base,  icon: 'route',    bg: [planColors.flight.tint,  planColors.flight.base]},
-  BusRide:        {color: planColors.neutral.base, icon: 'route',    bg: [planColors.neutral.tint, planColors.neutral.base]},
-  Ferry:          {color: planColors.flight.base,  icon: 'compass',  bg: [planColors.flight.tint,  planColors.flight.base]},
-  Cruise:         {color: planColors.flight.base,  icon: 'globe',    bg: [planColors.flight.tint,  planColors.flight.base]},
-  MapDestination: {color: planColors.neutral.base, icon: 'map-pin',  bg: [planColors.neutral.tint, planColors.neutral.base]},
-  Meeting:        {color: planColors.neutral.base, icon: 'calendar', bg: [planColors.neutral.tint, planColors.neutral.base]},
-};
+/** Build TYPE_META from the active theme's accent (plan-color) tokens. */
+export function makePlanTypeMeta(acc: PlanColorTokens): Record<string, PlanTypeMeta> {
+  return {
+    Flight:         {color: acc.flight.base,  icon: 'plane',    bg: [acc.flight.tint,  acc.flight.base]},
+    Hotel:          {color: acc.hotel.base,   icon: 'hotel',    bg: [acc.hotel.tint,   acc.hotel.base]},
+    Restaurant:     {color: acc.food.base,    icon: 'fork',     bg: [acc.food.tint,    acc.food.base]},
+    Activity:       {color: acc.nature.base,  icon: 'map-pin',  bg: [acc.nature.tint,  acc.nature.base]},
+    Tour:           {color: acc.nature.base,  icon: 'compass',  bg: [acc.nature.tint,  acc.nature.base]},
+    LocalEvent:     {color: acc.event.base,   icon: 'flag',     bg: [acc.event.tint,   acc.event.base]},
+    CarReservation: {color: acc.flight.base,  icon: 'route',    bg: [acc.flight.tint,  acc.flight.base]},
+    RailwayRide:    {color: acc.flight.base,  icon: 'route',    bg: [acc.flight.tint,  acc.flight.base]},
+    BusRide:        {color: acc.neutral.base, icon: 'route',    bg: [acc.neutral.tint, acc.neutral.base]},
+    Ferry:          {color: acc.flight.base,  icon: 'compass',  bg: [acc.flight.tint,  acc.flight.base]},
+    Cruise:         {color: acc.flight.base,  icon: 'globe',    bg: [acc.flight.tint,  acc.flight.base]},
+    MapDestination: {color: acc.neutral.base, icon: 'map-pin',  bg: [acc.neutral.tint, acc.neutral.base]},
+    Meeting:        {color: acc.neutral.base, icon: 'calendar', bg: [acc.neutral.tint, acc.neutral.base]},
+  };
+}
 
-export const DEFAULT_META: PlanTypeMeta = {
-  color: planColors.neutral.base,
-  icon: 'star',
-  bg: [planColors.neutral.tint, planColors.neutral.base],
-};
+export function makeDefaultMeta(acc: PlanColorTokens): PlanTypeMeta {
+  return {color: acc.neutral.base, icon: 'star', bg: [acc.neutral.tint, acc.neutral.base]};
+}
