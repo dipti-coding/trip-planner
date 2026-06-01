@@ -1,6 +1,5 @@
 import React, {useMemo} from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import Icon from './Icon';
 import {useTheme} from '../context/ThemeContext';
 import type {Plan} from '../types';
@@ -14,7 +13,7 @@ type Props = {
 };
 
 export default function PlanCard({plan, onPress}: Props) {
-  const {theme, colors, glass, typeMeta, defaultMeta} = useTheme();
+  const {theme, colors, typeMeta, defaultMeta} = useTheme();
   const meta = typeMeta[plan.type] ?? defaultMeta;
   const time = fmtTime(plan.start_datetime);
   const dur  = fmtDuration(plan.start_datetime, plan.end_datetime);
@@ -31,6 +30,7 @@ export default function PlanCard({plan, onPress}: Props) {
     thumb: {
       width: 56, height: 56, borderRadius: radii.lg,
       alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+      backgroundColor: colors.bgBase3,
     },
     content:  {flex: 1, minWidth: 0},
     timeRow:  {flexDirection: 'row', alignItems: 'center', marginBottom: 3},
@@ -43,13 +43,9 @@ export default function PlanCard({plan, onPress}: Props) {
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
-      <LinearGradient
-        colors={meta.bg}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}
-        style={styles.thumb}>
-        <Icon name={meta.icon} size={24} color={glass.textPrimary}/>
-      </LinearGradient>
+      <View style={styles.thumb}>
+        <Icon name={meta.icon} size={24} color={meta.color}/>
+      </View>
       <View style={styles.content}>
         {time ? (
           <View style={styles.timeRow}>

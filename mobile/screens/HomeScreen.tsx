@@ -22,6 +22,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import client from '../api/client';
 import Icon from '../components/Icon';
 import {DestinationCover} from '../components/DestinationCovers';
+import {PlaneSpinner} from '../components/Spinner';
 import {useTheme} from '../context/ThemeContext';
 import type {Trip} from '../types';
 import {dayCount, fmtShort, tripStatus} from '../utils/dates';
@@ -440,7 +441,7 @@ export default function HomeScreen({navigation}: Props) {
 
   const s = useMemo(() => StyleSheet.create({
     container:   {flex: 1, backgroundColor: colors.bgBase},
-    centered:    {flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing['2xl']},
+    centered:    {flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing['2xl'], backgroundColor: colors.bgBase},
     listContent: {paddingBottom: 40},
     header:      {flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: spacing.md, paddingBottom: spacing.xl},
     headerLeft:  {flex: 1},
@@ -484,9 +485,9 @@ export default function HomeScreen({navigation}: Props) {
     ];
   }, [trips, query]);
 
-  if (loading) return <SafeAreaView style={s.container}><ActivityIndicator size="large" color={colors.accent}/></SafeAreaView>;
+  if (loading) return <SafeAreaView style={s.centered}><PlaneSpinner/></SafeAreaView>;
   if (error)   return (
-    <SafeAreaView style={s.container}>
+    <SafeAreaView style={s.centered}>
       <Text style={s.errorText}>{error}</Text>
       <Text style={s.hintText}>Make sure the API is running: just up</Text>
     </SafeAreaView>

@@ -423,7 +423,7 @@ export default function TripDetailScreen({navigation, route}: Props) {
 
   const s = useMemo(() => StyleSheet.create({
     container: {flex: 1, backgroundColor: colors.bgBase},
-    centered:  {flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing['2xl']},
+    centered:  {flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing['2xl'], backgroundColor: colors.bgBase},
     header:    {overflow: 'hidden'},
     navRow:    {flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.xs, paddingBottom: spacing.xs, gap: spacing.md},
     navRight:  {flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginLeft: 'auto'},
