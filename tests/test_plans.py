@@ -104,12 +104,13 @@ def test_from_parsed_creates_flight_plan(client, user):
 
 def test_from_parsed_date_outside_trip_range(client, user):
     trip = _make_trip(client, user)
-    resp = client.post(f"/trips/{trip['id']}/plans/from-parsed", json={
-        "type": "Flight",
-        "title": "DL 100 SFO → JFK",
-        "start_datetime": "2025-11-08T09:25:00",
-        "details": {},
-    })
+    with patch.dict("os.environ", {"PARSE_TEST_MODE": ""}):
+        resp = client.post(f"/trips/{trip['id']}/plans/from-parsed", json={
+            "type": "Flight",
+            "title": "DL 100 SFO → JFK",
+            "start_datetime": "2025-11-08T09:25:00",
+            "details": {},
+        })
     assert resp.status_code == 422
     assert "outside this trip" in resp.json()["detail"]
 
@@ -142,6 +143,72 @@ def test_from_parsed_trip_not_found(client):
         "title": "Any flight",
         "details": {},
     })
+    assert resp.status_code == 404
+
+
+def test_bulk_create_round_trip_flight(client, user):
+    trip = _make_trip(client, user)
+    resp = client.post(f"/trips/{trip['id']}/plans/from-parsed-bulk", json=[
+        {
+            "type": "Flight",
+            "title": "AA0271 LAX → OGG",
+            "start_datetime": "2026-06-16T08:00:00",
+            "details": {"airline": "American", "flight_number": "AA0271", "departure_airport": "LAX", "arrival_airport": "OGG"},
+        },
+        {
+            "type": "Flight",
+            "title": "AA0254 OGG → LAX",
+            "start_datetime": "2026-06-17T10:00:00",
+            "details": {"airline": "American", "flight_number": "AA0254", "departure_airport": "OGG", "arrival_airport": "LAX"},
+        },
+    ])
+    assert resp.status_code == 201
+    data = resp.json()
+    assert len(data) == 2
+    assert data[0]["details"]["flight_number"] == "AA0271"
+    assert data[1]["details"]["flight_number"] == "AA0254"
+
+
+def test_bulk_create_single_flight(client, user):
+    trip = _make_trip(client, user)
+    resp = client.post(f"/trips/{trip['id']}/plans/from-parsed-bulk", json=[
+        {
+            "type": "Flight",
+            "title": "UA 837 SFO → NRT",
+            "start_datetime": "2026-06-01T10:00:00",
+            "details": {"airline": "United", "flight_number": "UA 837"},
+        },
+    ])
+    assert resp.status_code == 201
+    assert len(resp.json()) == 1
+
+
+def test_bulk_create_date_outside_range(client, user):
+    trip = _make_trip(client, user)
+    with patch.dict("os.environ", {"PARSE_TEST_MODE": ""}):
+        resp = client.post(f"/trips/{trip['id']}/plans/from-parsed-bulk", json=[
+            {
+                "type": "Flight",
+                "title": "AA0271 LAX → OGG",
+                "start_datetime": "2026-06-16T08:00:00",
+                "details": {},
+            },
+            {
+                "type": "Flight",
+                "title": "Out of range leg",
+                "start_datetime": "2025-01-01T08:00:00",
+                "details": {},
+            },
+        ])
+    assert resp.status_code == 422
+    plans = client.get(f"/trips/{trip['id']}/plans").json()
+    assert len(plans) == 0
+
+
+def test_bulk_create_trip_not_found(client):
+    resp = client.post(f"/trips/{uuid.uuid4()}/plans/from-parsed-bulk", json=[
+        {"type": "Flight", "title": "Any", "details": {}},
+    ])
     assert resp.status_code == 404
 
 

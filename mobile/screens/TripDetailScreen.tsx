@@ -273,7 +273,7 @@ function AddPlanOverlay({tripId, trip, defaultDate, onClose, onAdded}: {
       const text: string = await OCRModule.recognizeText(imageBase64);
       if (!text.trim()) { setParseError('No text found in the screenshot. Try a clearer image.'); return; }
       const parsed = await BookingParserModule.parseBookingText(text);
-      await client.post(`/trips/${tripId}/plans/from-parsed`, parsed);
+      await client.post(`/trips/${tripId}/plans/from-parsed-bulk`, parsed);
       const res = await client.get<Plan[]>(`/trips/${tripId}/plans`);
       onAdded(res.data); onClose();
     } catch (e: any) {

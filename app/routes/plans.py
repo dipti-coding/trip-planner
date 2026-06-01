@@ -55,14 +55,7 @@ def create_plan(trip_id: UUID, body: PlanCreate, db: Session = Depends(get_db), 
 
 
 
-@router.post("/trips/{trip_id}/plans/from-parsed", response_model=PlanResponse, status_code=201)
-def create_plan_from_parsed(trip_id: UUID, body: PlanCreate, db: Session = Depends(get_db), _: str = Depends(get_current_user)):
-    trip = db.query(Trip).filter(Trip.id == trip_id).first()
-    if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
-
-    test_mode = os.getenv("PARSE_TEST_MODE", "").strip() == "1"
-
+def _build_plan(trip, body: PlanCreate, test_mode: bool) -> Plan:
     if test_mode and not body.start_datetime:
         logging.warning(
             "[PARSE_TEST_MODE] No date parsed; defaulting to trip start date %s.",
@@ -100,18 +93,41 @@ def create_plan_from_parsed(trip_id: UUID, body: PlanCreate, db: Session = Depen
     except ValidationError as e:
         raise HTTPException(status_code=422, detail=e.errors())
 
-    plan = Plan(
-        trip_id=trip_id,
+    return Plan(
+        trip_id=trip.id,
         type=body.type,
         title=body.title,
         start_datetime=body.start_datetime,
         end_datetime=body.end_datetime,
         details=validated_details,
     )
+
+
+@router.post("/trips/{trip_id}/plans/from-parsed", response_model=PlanResponse, status_code=201)
+def create_plan_from_parsed(trip_id: UUID, body: PlanCreate, db: Session = Depends(get_db), _: str = Depends(get_current_user)):
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    test_mode = os.getenv("PARSE_TEST_MODE", "").strip() == "1"
+    plan = _build_plan(trip, body, test_mode)
     db.add(plan)
     db.commit()
     db.refresh(plan)
     return plan
+
+
+@router.post("/trips/{trip_id}/plans/from-parsed-bulk", response_model=list[PlanResponse], status_code=201)
+def create_plans_from_parsed_bulk(trip_id: UUID, body: list[PlanCreate], db: Session = Depends(get_db), _: str = Depends(get_current_user)):
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    test_mode = os.getenv("PARSE_TEST_MODE", "").strip() == "1"
+    plans = [_build_plan(trip, item, test_mode) for item in body]
+    db.add_all(plans)
+    db.commit()
+    for p in plans:
+        db.refresh(p)
+    return plans
 
 
 @router.get("/plans/{plan_id}", response_model=PlanResponse)

@@ -35,3 +35,4 @@ mobile/node_modules/
 
 # iOS developer-specific signing (copy local.xcconfig.example → local.xcconfig and fill in)
 mobile/ios/local.xcconfig
+mobile/ios/tmp.xcconfig
