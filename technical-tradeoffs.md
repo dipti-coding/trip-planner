@@ -190,6 +190,55 @@ JSONB is the right choice here for three reasons:
 
 ---
 
+## Location Lookup API: Trip Creation vs Plan Creation
+
+**Decision: Photon (trip destination) + Geoapify (plan POI) — revisit at scale**
+
+The app has two distinct location lookup needs with different data requirements, so they are treated as separate services behind a thin abstraction layer (`locationService.ts` / `placesService.ts`) that normalizes responses to internal types. Swapping a provider means changing one file.
+
+### Use Case 1: Trip Creation (city/destination autocomplete)
+
+| API | Free Limit | API Key | Attribution | Notes |
+|---|---|---|---|---|
+| **Photon (Komoot)** | Unlimited\* | None | OSM credit required | Best autocomplete UX; self-hostable |
+| Mapbox Geocoding | 100k req/mo | Yes, no CC | None required | Clean API, clear upgrade path |
+| LocationIQ | 5k req/day | Yes, no CC | Link required | Most generous hard daily limit |
+| Nominatim (OSM) | 1 req/sec | None | OSM credit required | No autocomplete; better self-hosted |
+
+**Selected: Photon.** No key required, great search-as-you-type, no CC. At 1,000 users with typical usage stays well under "reasonable use." Mapbox is the natural upgrade — same API shape, 100k/mo hard limit, no attribution.
+
+### Use Case 2: Plan Creation (POI search — restaurants, hotels, attractions)
+
+| API | Free Limit | API Key | Attribution | Notes |
+|---|---|---|---|---|
+| **Geoapify Places** | 3k credits/day (~90k/mo) | Yes, no CC | Check docs | Single provider covers geocoding + POI |
+| Foursquare Places | 10k calls/mo | Yes, CC required | Required | Best POI data quality; CC is a barrier |
+| Overpass (OSM) | Unlimited\* | None | OSM credit required | Complex query language; raw data |
+
+**Selected: Geoapify.** 3k credits/day is plenty for 1,000 users, no CC required, covers POI categories well. Foursquare is the upgrade path if richer POI data (photos, ratings, hours) is needed.
+
+### Scale thresholds
+
+| Users | Trip lookup | Plan POI |
+|---|---|---|
+| ≤ 1,000 | Photon (free, no key) | Geoapify (3k/day free) |
+| ~5,000 | Mapbox (100k/mo free) | Geoapify paid or Foursquare |
+| 10,000+ | Mapbox paid | Foursquare Places |
+
+### Abstraction approach
+
+Two service files with normalized return types decouple providers from UI:
+
+```
+services/
+  locationService.ts   ← searchDestinations(query) → {id, name, lat, lng}[]
+  placesService.ts     ← searchPlaces(query, lat, lng, category) → Place[]
+```
+
+Swapping Photon → Mapbox is a single-file change. Components never import provider SDKs directly.
+
+---
+
 ## Booking Confirmation Text Parsing
 
 The core problem
