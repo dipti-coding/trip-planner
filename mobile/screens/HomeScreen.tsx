@@ -295,7 +295,9 @@ function AddTripWizard({visible, onClose, onCreated}: {visible: boolean; onClose
   function reset() { setStep('destination'); setDests([]); setDestSearch(''); setStartDate(null); setEndDate(null); setTripName(''); setCreating(false); }
   function handleClose() { reset(); onClose(); }
   function toggleDest(d: SelectedDest) {
-    setDests(prev => prev.some(x => x.city === d.city) ? prev.filter(x => x.city !== d.city) : [...prev, d]);
+    const isSelected = dests.some(x => x.city === d.city);
+    setDests(prev => isSelected ? prev.filter(x => x.city !== d.city) : [...prev, d]);
+    if (!isSelected) setDestSearch('');
   }
   const defaultName = dests.length > 0 ? dests[0].city : 'My trip';
 
