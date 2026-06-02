@@ -273,7 +273,7 @@ function AddPlanOverlay({tripId, trip, defaultDate, onClose, onAdded}: {
       const text: string = await OCRModule.recognizeText(imageBase64);
       if (!text.trim()) { setParseError('No text found in the screenshot. Try a clearer image.'); return; }
       const parsed = await BookingParserModule.parseBookingText(text);
-      await client.post(`/trips/${tripId}/plans/from-parsed`, parsed);
+      await client.post(`/trips/${tripId}/plans/from-parsed-bulk`, parsed);
       const res = await client.get<Plan[]>(`/trips/${tripId}/plans`);
       onAdded(res.data); onClose();
     } catch (e: any) {
@@ -423,7 +423,7 @@ export default function TripDetailScreen({navigation, route}: Props) {
 
   const s = useMemo(() => StyleSheet.create({
     container: {flex: 1, backgroundColor: colors.bgBase},
-    centered:  {flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing['2xl']},
+    centered:  {flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing['2xl'], backgroundColor: colors.bgBase},
     header:    {overflow: 'hidden'},
     navRow:    {flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.xs, paddingBottom: spacing.xs, gap: spacing.md},
     navRight:  {flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginLeft: 'auto'},

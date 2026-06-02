@@ -2,57 +2,59 @@
  * JS-side splash screen — shown while ThemeProvider reads the persisted
  * theme from AsyncStorage (typically <100 ms).
  *
- * Intentionally hardcoded to the midnight theme's primary colour so it
- * blends seamlessly with the native LaunchScreen.storyboard, regardless
- * of which theme was last active.
+ * Uses explicit Dimensions values for the background Image so that
+ * resizeMode="cover" fires reliably in React Native Fabric. With
+ * StyleSheet.absoluteFill the Image can render at its natural 1024×1024 pt
+ * size and show only the top-left corner of the artwork.
  */
 import React from 'react';
-import {Image, StyleSheet, Text, View} from 'react-native';
+import {Image, StatusBar, StyleSheet, Text, View} from 'react-native';
 
-// Hardcoded midnight primary[700] — matches LaunchScreen.storyboard bg
-const BG   = '#0B2150';
 const ICON = require('../assets/icon.png');
-
-// iOS squircle approximation: ~22% of icon display size.
-// Clips the opaque-white corners baked into the PNG artwork.
-const ICON_SIZE   = 100;
-const ICON_RADIUS = 22;
 
 export default function SplashScreen() {
   return (
     <View style={styles.container}>
-      <View style={styles.iconClip}>
-        <Image source={ICON} style={styles.icon} resizeMode="cover"/>
-      </View>
-      <Text style={styles.name}>PlanMyTrip</Text>
+      <StatusBar translucent backgroundColor="transparent" barStyle="light-content"/>
+      <Image source={ICON} style={styles.bg} resizeMode="cover"/>
+      <View style={styles.overlay}/>
+      <Text style={styles.name}>wandur</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  // position:absolute + inset:0 fills the RN root regardless of parent flex.
+  // flex:1 alone requires a parent with an explicit height, which ThemeProvider
+  // doesn't guarantee.
   container: {
-    flex: 1,
-    backgroundColor: BG,
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: '#000',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // overflow:hidden on the wrapping View is what actually clips the corners —
-  // borderRadius on <Image> alone doesn't reliably clip on all iOS versions.
-  iconClip: {
-    width: ICON_SIZE,
-    height: ICON_SIZE,
-    borderRadius: ICON_RADIUS,
-    overflow: 'hidden',
-    marginBottom: 20,
+  // 100% of the positioned container fills the root view reliably without
+  // depending on Dimensions values matching the actual root view size.
+  bg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
   },
-  icon: {
-    width: ICON_SIZE,
-    height: ICON_SIZE,
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(0,0,0,0.35)',
   },
   name: {
     color: '#ffffff',
-    fontSize: 28,
+    fontSize: 34,
     fontWeight: '700',
-    letterSpacing: -0.5,
+    letterSpacing: -1,
   },
 });

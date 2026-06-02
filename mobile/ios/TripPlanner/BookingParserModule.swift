@@ -70,8 +70,8 @@ class BookingParserModule: NSObject {
     if #available(iOS 26.0, *) {
       Task {
         do {
-          let result = try await Self.parseWithFoundationModels(text)
-          resolve(result)
+          let results = try await Self.parseWithFoundationModels(text)
+          resolve(results)
         } catch {
           reject("APPLE_INTELLIGENCE_UNAVAILABLE", error.localizedDescription, error)
         }
@@ -82,7 +82,7 @@ class BookingParserModule: NSObject {
   }
 
   @available(iOS 26.0, *)
-  private static func parseWithFoundationModels(_ text: String) async throws -> [String: Any] {
+  private static func parseWithFoundationModels(_ text: String) async throws -> [[String: Any]] {
     switch SystemLanguageModel.default.availability {
     case .unavailable(let reason):
       throw NSError(
@@ -102,11 +102,15 @@ class BookingParserModule: NSObject {
     // This is more reliable than @Generable structured generation on-device.
     let session = LanguageModelSession(instructions:
       "You are a travel booking parser. Extract information from booking confirmation text " +
-      "and return ONLY a valid JSON object — no explanation, no markdown, just the JSON."
+      "and return ONLY a valid JSON array — no explanation, no markdown, just the JSON."
     )
 
     let prompt = """
-      Extract booking details from the text below. Return ONLY this JSON (null for missing fields):
+      Extract booking details from the text below. Return a JSON ARRAY where each element \
+      is one booking item. For multi-leg flights return one object per leg; for all other \
+      booking types return a single-element array. Use null for missing fields.
+
+      Each element must follow this schema:
       {
         "planType": "<Flight|Hotel|CarReservation|Tour|Cruise|Ferry|RailwayRide|BusRide|LocalEvent|Restaurant|Activity>",
         "title": "<short display title>",
@@ -127,7 +131,7 @@ class BookingParserModule: NSObject {
 
     do {
       let response = try await session.respond(to: prompt)
-      return try Self.parseJSON(response.content, planType: "")
+      return try Self.parseJSONArray(response.content)
     } catch {
       // GenerationError is bridged as NSError; don't expose the raw framework message.
       throw NSError(
@@ -137,27 +141,38 @@ class BookingParserModule: NSObject {
     }
   }
 
-  // Extract JSON from the model response and map to the dict format from-parsed expects
-  private static func parseJSON(_ raw: String, planType: String) throws -> [String: Any] {
-    // Find the JSON object in the response (model may wrap it in markdown/text)
-    guard let start = raw.firstIndex(of: "{"),
-          let end = raw.lastIndex(of: "}") else {
+  // Extract a JSON array from the model response. Falls back to wrapping a single object
+  // in an array if the model returns a bare object instead of an array.
+  private static func parseJSONArray(_ raw: String) throws -> [[String: Any]] {
+    if let arrStart = raw.firstIndex(of: "["), let arrEnd = raw.lastIndex(of: "]") {
+      let jsonString = String(raw[arrStart...arrEnd])
+      if let data = jsonString.data(using: .utf8),
+         let arr = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+        return try arr.map { try Self.mapPlan($0) }
+      }
+    }
+    // Fallback: model returned a bare object — wrap it
+    guard let objStart = raw.firstIndex(of: "{"), let objEnd = raw.lastIndex(of: "}") else {
       throw NSError(domain: "BookingParser", code: 3,
                     userInfo: [NSLocalizedDescriptionKey: "No JSON found in model response"])
     }
-    let jsonString = String(raw[start...end])
+    let jsonString = String(raw[objStart...objEnd])
     guard let data = jsonString.data(using: .utf8),
           let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
       throw NSError(domain: "BookingParser", code: 4,
                     userInfo: [NSLocalizedDescriptionKey: "Failed to parse model JSON"])
     }
+    return [try Self.mapPlan(json)]
+  }
 
+  // Map a single parsed JSON object to the dict shape that /from-parsed-bulk expects
+  private static func mapPlan(_ json: [String: Any]) throws -> [String: Any] {
     func str(_ key: String) -> String? {
       guard let v = json[key] as? String, !v.isEmpty, v != "null" else { return nil }
       return v
     }
 
-    let pt = str("planType") ?? planType
+    let pt = str("planType") ?? ""
     var details: [String: Any] = [:]
     func set(_ k: String, _ v: String?) { if let v { details[k] = v } }
 
