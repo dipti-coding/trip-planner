@@ -164,7 +164,7 @@ function CalendarPicker({onRange}: {onRange: (s: string | null, e: string | null
   const [end, setEnd]     = useState<string | null>(null);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const months = [0, 1].map(o => new Date(today.getFullYear(), today.getMonth() + o, 1));
+  const months = Array.from({length: 12}, (_, o) => new Date(today.getFullYear(), today.getMonth() + o, 1));
 
   const s = useMemo(() => StyleSheet.create({
     month:       {marginBottom: spacing.xl},
