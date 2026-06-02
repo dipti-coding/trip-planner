@@ -246,7 +246,7 @@ function AddTripWizard({visible, onClose, onCreated}: {visible: boolean; onClose
     const t = setTimeout(async () => {
       setApiLoading(true);
       try { setApiResults(await searchLocations(q)); }
-      catch { /* silently fall through to static results */ }
+      catch (_e) { /* silently fall through to static results */ }
       finally { setApiLoading(false); }
     }, 350);
     return () => clearTimeout(t);

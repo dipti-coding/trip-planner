@@ -1,5 +1,23 @@
 import {DestinationType} from '../utils/destinations';
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const localDestinations: {name: string; country: string; region: string | null; type: DestinationType}[] = require('../assets/destinations/destinations.json');
+
+function localType(name: string, country: string, region: string | null): DestinationType | null {
+  const n = name.toLowerCase();
+  const c = country.toLowerCase();
+  const r = region ? region.toLowerCase() : null;
+  const candidates = localDestinations.filter(
+    d => d.name.toLowerCase() === n && d.country.toLowerCase() === c,
+  );
+  if (candidates.length === 0) return null;
+  if (r) {
+    const withRegion = candidates.find(d => d.region && d.region.toLowerCase() === r);
+    if (withRegion) return withRegion.type;
+  }
+  return candidates[0].type;
+}
+
 export type LocationResult = {
   id: string;
   name: string;
@@ -21,6 +39,7 @@ type PhotonFeature = {
     city?: string;
     country?: string;
     countrycode?: string;
+    state?: string;
   };
 };
 
@@ -53,7 +72,7 @@ export async function searchLocations(query: string, limit = 20): Promise<Locati
         name: p.name ?? p.city ?? '',
         country: p.country ?? '',
         countryCode: (p.countrycode ?? '').toUpperCase(),
-        type: toDestType(p.osm_value, p.osm_key),
+        type: localType(p.name ?? p.city ?? '', p.country ?? '', p.state ?? null) ?? toDestType(p.osm_value, p.osm_key),
         lat,
         lng,
       };
