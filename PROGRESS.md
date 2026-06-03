@@ -167,6 +167,115 @@ Branch: `feature/aws-deployment` — PR #22
 - [x] `DEV_README.md` — Authentication section added with working curl examples; create-trip curl updated with real response
 - [x] Hardcoded credentials removed: `mobile/api/auth.ts` reads `TEST_EMAIL`/`TEST_PWD` from react-native-config; `tests/test_auth.py` reads `AUTH_USER_PWD` from env; `mobile/env.d.ts` and both `.env.example` files updated
 
+---
+
+## Design System (2026-05-27)
+
+### Mobile — Design Tokens + theme.ts
+Branch: `feature/design-tokens` — PR #19
+- [x] `designs/PlanMyTrip.html` — full Claude Design export added as visual source of truth
+- [x] `mobile/theme.ts` — colors (light + dark), typography (IBM Plex Sans/Mono, size scale, weights), radii, and spacing tokens extracted from design CSS variables
+- [x] `PlanCard.tsx` updated as first consumer — all hardcoded values replaced with token references
+
+### Mobile — Design Alignment Round 2
+Branch: `feature/design-alignment-2` — PR #20
+- [x] **Timeline view**: hour-grid calendar (6am–10pm, 64px/hour) with colour-coded, absolutely-positioned event blocks
+- [x] **Itinerary view**: all-days document with `LinearGradient` day card headers, plan rows, per-day plan/cost footer
+- [x] **Day pickers**: radius changed from pill (`radii.chip`) to rounded rectangle (`radii.lg`)
+- [x] **Cover palette**: `coverPalette` in `theme.ts` replaced with muted, desaturated tones
+- [x] **PlanDetailSheet**: `paddingBottom: 34` added to clear iOS home indicator
+- [x] **Trip creation fixed**: hardcoded `DEV_USER_ID` synced between mobile POST body and `scripts/seed.py`
+- [x] **iOS build fix**: `react-native-config` workspace install + Xcode build phase reordering to eliminate `error export CLANG_WARN_*` errors
+
+---
+
+## On-Device Intelligence + Native Modules (2026-05-28 – 2026-05-30)
+
+### Mobile — Delete Trip from TripDetailScreen
+Branch: `feature/delete-trip-detail` — PR #24
+- [x] `•••` glass button in TripDetail nav header — destructive Alert confirmation, calls `DELETE /trips/:id`, navigates back on success
+- [x] `HomeScreen` re-fetches on `focus` so deleted trip disappears immediately
+
+### Mobile — Add-Plan Flow Overhaul + Plan Card Cleanup
+Branch: `feature/add-plan-overhaul` — PR #25
+- [x] "Upload Booking Screenshot": opens Photos Finder directly; thumbnail preview + "Detect & extract" confirm step before submitting
+- [x] "Enter Booking Details": all 13 plan types shown in wrapping grid; type sent as backend enum string directly
+- [x] Plan card simplified: icon badge + time · duration + title only (removed subtitle and cost)
+- [x] Removed text-paste input, "Use sample" link, and quick-type shortcuts from picker screen
+- [x] `app/routes/plans.py`: `image: File` → `image: UploadFile` annotation fix (was crashing API on startup)
+
+### Mobile — iOS App Icon
+Branch: `feature/app-icon` — PR #26
+- [x] All required iPhone icon sizes (40 – 1024px) added to `AppIcon.appiconset` — warm orange `#E07B39` background, compass motif with flight arc and destination pin
+
+### Mobile + Backend — OCR and Parsing Fully On-Device
+Branch: `feature/on-device-ocr` — PR #27
+- [x] **Drops server-side OCR/parsing** (`pytesseract`, regex `parsing.py`, `ocr.py`) — replaced with native iOS modules
+- [x] `OCRModule` (Swift) — Apple Vision framework for on-device text recognition
+- [x] `BookingParserModule` (Swift) — Apple FoundationModels / Apple Intelligence for structured extraction; gated behind `#available(iOS 26)`, returns `false` on simulator
+- [x] `POST /trips/{id}/plans/from-parsed` — new backend endpoint accepting pre-parsed `PlanCreate` from mobile (no server-side ML)
+- [x] `patch-package` postinstall fixes `getBuildSettings` indexing bug in RN CLI for multi-target workspaces
+
+---
+
+## UI Redesign — wandur Branding (2026-05-31 – 2026-06-01)
+
+### Mobile — Plan Cards + Detail Sheet Redesign
+Branch: `feature/plan-cards-redesign` — PR #28
+- [x] `PlanCard`: 56×56 gradient thumbnail (replaces 38×38 badge); three-line layout — route/name, operator, location — from real backend `details` fields per plan type
+- [x] `PlanDetailSheet`: hero uses per-type gradient + large watermark icon; detail rows driven by real schema fields
+- [x] `utils/planLines.ts` (new): shared `getPlanLines`, `getDetailRows`, `getMapsQuery` helpers for card/sheet consistency
+- [x] `planTypes.ts`: `bg` gradient color pairs added for thumbnails
+
+### Mobile — SVG Destination Covers + wandur Branding
+Branch: `feature/svg-covers-and-app-icon` — PR #29
+- [x] **Replaces ~24 MB of scraped JPGs** with 7 inline SVG illustrations covering all destination types (city, beach, island, mountain, nature, historical, other)
+- [x] **Deterministic per-trip tint** from trip ID (`tripTint`) applied to card covers, detail header, and itinerary day headers
+- [x] **App renamed** from "TripPlanner" to "wandur"; icon updated to three wandur variants (default, dark, tinted)
+- [x] **Bottom tab bar** hidden on `TripDetail` via `getFocusedRouteNameFromRoute`
+- [x] **Wizard thumbnails**: destination rows and chips now show the SVG illustration
+- [x] Deleted: `mobile/assets/destinations/images/` (69 JPGs), fallbacks, `CityCovers.tsx`, Wikipedia scraping script
+
+### Backend + Mobile — Real Plan Count + % Planned on Trip Cards
+Branch: `feature/trip-plan-stats` — PR #30
+- [x] `TripResponse`: added `plan_count`, `scheduled_count`, `percent_planned` fields
+- [x] `GET /trips` and `GET /{trip_id}`: plans loaded in a single `IN` query (no N+1); coverage computed via `_percent_planned()`
+- [x] Coverage algorithm: buffered windows `[start−1hr, (end or start+1hr)+1hr]` merged, overlapped against 8am–10pm per day, capped at 100%
+- [x] `mobile/types.ts` and `HomeScreen.tsx` `TripCard` updated to use real values
+
+### Mobile — Theme System Redesign
+Branch: `ankit/theme-system` — PR #31 | `feat/theme-system-redesign` — PR #33
+- [x] Full theme token system — splash screen, spinner, app delegate, and launch storyboard updated for consistent dark-mode and light-mode rendering
+- [x] `SplashScreen.tsx` and `Spinner.tsx` refactored to use theme tokens throughout
+- [x] iOS `AppDelegate.swift` updated to set window background before first render, eliminating white flash on launch
+
+---
+
+## Trip Creation + Bug Fixes (2026-06-02 – 2026-06-03)
+
+### Backend — Multi-Leg Flight Parsing
+Branch: `feature/multi-leg-flight-parsing` — PR #34
+- [x] Apple Intelligence prompt returns a JSON array — one element per flight leg (round-trip → 2 plans, multi-city → N plans); bare-object fallback for model regressions
+- [x] `POST /trips/{id}/plans/from-parsed-bulk` — accepts `list[PlanCreate]`, validates each, bulk-inserts atomically; shared `_build_plan` helper extracted
+- [x] Mobile `handleDetect` posts to `from-parsed-bulk` with the array result — no UI changes
+- [x] `mobile/ios/tmp.xcconfig` removed from tracking (build artifact with dev credentials); added to `.gitignore`
+- [x] `scripts/test_ocr.py` deleted — orphaned since parsing moved on-device
+- Closes issue #9
+
+### Mobile — Calendar Date Picker Fix
+Branch: `fix/calendar-view-trip-addition` — PR #35
+- [x] Calendar in trip creation flow extended from 2 months to 12 rolling months from today
+
+### Mobile — Live Location Search (Photon API)
+Branch: `feat/location-lookup-trip-creation` — PR #36
+- [x] Replaces static local JSON destination search with live Photon (OpenStreetMap) API
+- [x] 350ms debounce on input; empty state ("Top Destinations") still served from local curated list
+- [x] `mobile/services/locationService.ts` — normalized abstraction layer; Mapbox swap is a single-file change
+- [x] `technical-tradeoffs.md` — documents API decision and scale thresholds
+- [x] Fix: deduplicate Photon results by `osm_type+osm_id` to prevent duplicate React keys when the same feature appears across multiple layers
+
+---
+
 ## Week 3 — Weather + PDF Export
 _Not started_
 
