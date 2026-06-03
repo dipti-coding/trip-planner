@@ -30,6 +30,8 @@ import type {RootStackParamList} from '../App';
 import {radii, spacing, typography} from '../theme';
 import {findDestination, searchDestinations} from '../utils/destinations';
 import type {Destination} from '../utils/destinations';
+import {searchLocations} from '../services/locationService';
+import type {LocationResult} from '../services/locationService';
 
 type Props = {
   navigation: CompositeNavigationProp<
@@ -141,7 +143,7 @@ function TripCard({trip, onPress}: {trip: TripWithStatus; onPress: () => void}) 
 // ─── Add Trip Wizard ─────────────────────────────────────────────────────────
 
 type AddTripStep = 'destination' | 'dates' | 'confirm';
-type SelectedDest = {city: string; country: string; dest: Destination | null};
+type SelectedDest = {city: string; country: string; dest: Destination | LocationResult | null};
 
 function StepIndicator({total, current}: {total: number; current: number}) {
   const {theme, colors} = useTheme();
@@ -235,6 +237,20 @@ function AddTripWizard({visible, onClose, onCreated}: {visible: boolean; onClose
   const [endDate, setEndDate]     = useState<string | null>(null);
   const [tripName, setTripName]   = useState('');
   const [creating, setCreating]   = useState(false);
+  const [apiResults, setApiResults] = useState<LocationResult[]>([]);
+  const [apiLoading, setApiLoading] = useState(false);
+
+  useEffect(() => {
+    const q = destSearch.trim();
+    if (!q) { setApiResults([]); return; }
+    const t = setTimeout(async () => {
+      setApiLoading(true);
+      try { setApiResults(await searchLocations(q)); }
+      catch (_e) { /* silently fall through to static results */ }
+      finally { setApiLoading(false); }
+    }, 350);
+    return () => clearTimeout(t);
+  }, [destSearch]);
 
   const s = useMemo(() => StyleSheet.create({
     overlay:    {flex: 1, justifyContent: 'flex-end', backgroundColor: glass.modalBg},
@@ -279,7 +295,9 @@ function AddTripWizard({visible, onClose, onCreated}: {visible: boolean; onClose
   function reset() { setStep('destination'); setDests([]); setDestSearch(''); setStartDate(null); setEndDate(null); setTripName(''); setCreating(false); }
   function handleClose() { reset(); onClose(); }
   function toggleDest(d: SelectedDest) {
-    setDests(prev => prev.some(x => x.city === d.city) ? prev.filter(x => x.city !== d.city) : [...prev, d]);
+    const isSelected = dests.some(x => x.city === d.city);
+    setDests(prev => isSelected ? prev.filter(x => x.city !== d.city) : [...prev, d]);
+    if (!isSelected) setDestSearch('');
   }
   const defaultName = dests.length > 0 ? dests[0].city : 'My trip';
 
@@ -299,7 +317,8 @@ function AddTripWizard({visible, onClose, onCreated}: {visible: boolean; onClose
     finally { setCreating(false); }
   }
 
-  const searchResults = useMemo(() => searchDestinations(destSearch, 20), [destSearch]);
+  const topDestinations = useMemo(() => searchDestinations('', 20), []);
+  const searchResults = destSearch.trim() ? apiResults : topDestinations;
   const stepIndex = step === 'destination' ? 0 : step === 'dates' ? 1 : 2;
 
   return (
@@ -345,19 +364,23 @@ function AddTripWizard({visible, onClose, onCreated}: {visible: boolean; onClose
                   <TextInput style={s.searchInput} placeholder={dests.length > 0 ? 'Add another stop' : 'City, country or region'} placeholderTextColor={colors.textTertiary} value={destSearch} onChangeText={setDestSearch}/>
                 </View>
                 <Text style={s.sectionLabel}>{destSearch.trim() ? 'RESULTS' : 'TOP DESTINATIONS'}</Text>
-                {searchResults.map(item => {
-                  const selected = dests.some(d => d.city === item.name);
-                  return (
-                    <TouchableOpacity key={item.id} style={s.destRow} onPress={() => toggleDest({city: item.name, country: item.country, dest: item})} activeOpacity={0.7}>
-                      <View style={s.destThumb}><DestinationCover type={item.type ?? 'other'}/></View>
-                      <View style={s.destInfo}>
-                        <Text style={s.destCity}>{item.name}</Text>
-                        <Text style={s.destCountry}>{item.country}</Text>
-                      </View>
-                      {selected ? <Icon name="check" size={18} color={colors.success}/> : <Icon name="plus" size={18} color={colors.accent}/>}
-                    </TouchableOpacity>
-                  );
-                })}
+                {apiLoading ? (
+                  <ActivityIndicator color={colors.accent} style={{marginVertical: spacing.xl}}/>
+                ) : (
+                  searchResults.map(item => {
+                    const selected = dests.some(d => d.city === item.name);
+                    return (
+                      <TouchableOpacity key={item.id} style={s.destRow} onPress={() => toggleDest({city: item.name, country: item.country, dest: item})} activeOpacity={0.7}>
+                        <View style={s.destThumb}><DestinationCover type={item.type ?? 'other'}/></View>
+                        <View style={s.destInfo}>
+                          <Text style={s.destCity}>{item.name}</Text>
+                          <Text style={s.destCountry}>{item.country}</Text>
+                        </View>
+                        {selected ? <Icon name="check" size={18} color={colors.success}/> : <Icon name="plus" size={18} color={colors.accent}/>}
+                      </TouchableOpacity>
+                    );
+                  })
+                )}
                 {destSearch.trim().length > 0 && (
                   <TouchableOpacity style={s.destRow} onPress={() => toggleDest({city: destSearch.trim(), country: '', dest: null})} activeOpacity={0.7}>
                     <View style={s.destThumb}><DestinationCover type="city"/></View>
