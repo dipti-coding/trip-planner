@@ -62,19 +62,24 @@ export async function searchLocations(query: string, limit = 20): Promise<Locati
   const json = await res.json();
   const features: PhotonFeature[] = json.features ?? [];
 
+  const seen = new Set<string>();
   return features
     .filter(f => f.properties.name)
-    .map(f => {
+    .reduce<LocationResult[]>((acc, f) => {
       const p = f.properties;
+      const id = `${p.osm_type}${p.osm_id}`;
+      if (seen.has(id)) return acc;
+      seen.add(id);
       const [lng, lat] = f.geometry.coordinates;
-      return {
-        id: `${p.osm_type}${p.osm_id}`,
+      acc.push({
+        id,
         name: p.name ?? p.city ?? '',
         country: p.country ?? '',
         countryCode: (p.countrycode ?? '').toUpperCase(),
         type: localType(p.name ?? p.city ?? '', p.country ?? '', p.state ?? null) ?? toDestType(p.osm_value, p.osm_key),
         lat,
         lng,
-      };
-    });
+      });
+      return acc;
+    }, []);
 }
