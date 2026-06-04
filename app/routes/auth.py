@@ -1,6 +1,7 @@
 import hashlib
 import os
 import secrets
+import uuid
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status

@@ -1,6 +1,5 @@
 import React, {useMemo} from 'react';
 import {Alert, SafeAreaView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
-import Config from 'react-native-config';
 import Icon from '../components/Icon';
 import {useAuth} from '../context/AuthContext';
 import {useTheme} from '../context/ThemeContext';
@@ -82,6 +81,14 @@ export default function AccountScreen() {
     optionText:    {flex: 1},
     optionLabel:   {fontSize: typography.base, fontWeight: typography.semibold, color: colors.textPrimary},
     optionDesc:    {fontSize: typography.bodySmall, color: colors.textSecondary, marginTop: 2},
+    logoutButton: {
+      marginHorizontal: 20, marginTop: spacing.xl,
+      paddingVertical: spacing.lg,
+      borderRadius: radii.card,
+      borderWidth: 1, borderColor: '#000',
+      alignItems: 'center',
+    },
+    logoutText: {fontSize: typography.base, fontWeight: typography.semibold, color: '#000'},
   }), [theme]);
 
   return (
@@ -117,19 +124,9 @@ export default function AccountScreen() {
         })}
       </View>
 
-      {Config.AUTH_DEV_MODE !== '1' && (
-        <>
-          <Text style={styles.sectionLabel}>Account</Text>
-          <View style={styles.card}>
-            <TouchableOpacity style={styles.optionRow} onPress={handleSignOut} activeOpacity={0.7}>
-              <View style={[styles.primaryDot, {backgroundColor: colors.danger ?? '#c62828'}]}>
-                <Icon name="logout" size={16} color="#fff" />
-              </View>
-              <Text style={[styles.optionLabel, {color: colors.danger ?? '#c62828'}]}>Sign out</Text>
-            </TouchableOpacity>
-          </View>
-        </>
-      )}
+      <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut} activeOpacity={0.7}>
+        <Text style={styles.logoutText}>Log out</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
