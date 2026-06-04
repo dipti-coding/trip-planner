@@ -11,6 +11,8 @@ gen-docker-env:
     for line in lines:
         if line and not line.startswith('#') and '=' in line:
             key, _, val = line.partition('=')
+            if key.startswith('TF_VAR_') or key.startswith('PROD_'):
+                continue  # infra-only vars, not needed in Docker
             val = val.strip("'\"")       # strip quotes used for local-dev safety
             val = val.replace('$', '$$') # escape $ so Docker Compose doesn't interpolate
             out.append(f"{key}={val}")
@@ -127,6 +129,22 @@ ios sim="":
     cd mobile && npm run ios -- --udid "$UDID"
 
 # ── AWS / Terraform ────────────────────────────────────────────────────────────
+
+# Push secret values from .env to AWS Secrets Manager (run after tf-apply)
+push-secrets:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    APP="${TF_VAR_app_name:-trip-planner}"
+    ENDPOINT=$(cd infra && terraform output -raw rds_endpoint)
+    DB_USER="${TF_VAR_db_username:-trip_planner}"
+    DB_NAME="${TF_VAR_db_name:-trip_planner}"
+    DATABASE_URL="postgresql://${DB_USER}:${TF_VAR_db_password}@${ENDPOINT}/${DB_NAME}"
+    aws secretsmanager put-secret-value --secret-id "$APP/db-password"            --secret-string "$TF_VAR_db_password"
+    aws secretsmanager put-secret-value --secret-id "$APP/database-url"           --secret-string "$DATABASE_URL"
+    aws secretsmanager put-secret-value --secret-id "$APP/jwt-secret-key"         --secret-string "$PROD_JWT_SECRET_KEY"
+    aws secretsmanager put-secret-value --secret-id "$APP/auth-user-email"        --secret-string "$PROD_AUTH_USER_EMAIL"
+    aws secretsmanager put-secret-value --secret-id "$APP/auth-user-password-hash" --secret-string "$PROD_AUTH_USER_PASSWORD_HASH"
+    echo "All secrets pushed to Secrets Manager."
 
 # Initialize Terraform (first time only)
 tf-init:
