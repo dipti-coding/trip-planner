@@ -51,3 +51,9 @@ variable "fargate_memory" {
   type        = number
   default     = 512
 }
+
+variable "db_password" {
+  description = "RDS master password — provide via TF_VAR_db_password in .env (never hardcode)"
+  type        = string
+  sensitive   = true
+}
