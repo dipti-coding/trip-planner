@@ -29,6 +29,7 @@ def test_login_returns_token(auth_client):
     assert resp.status_code == 200
     data = resp.json()
     assert "access_token" in data
+    assert "refresh_token" in data
     assert data["token_type"] == "bearer"
 
 

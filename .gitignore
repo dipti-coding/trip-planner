@@ -1,6 +1,6 @@
 # Claude
-.claude/settings/local.json
-.claude/worktrees/
+.claude/
+
 
 # Hermit package cache
 .hermit/
@@ -29,6 +29,10 @@ infra/*.tfvars
 # Node / React Native
 node_modules/
 mobile/node_modules/
+mobile/package-lock.json
+
+# Screenshots / local test assets
+scripts/booking_screenshots/
 
 # macOS
 .DS_Store

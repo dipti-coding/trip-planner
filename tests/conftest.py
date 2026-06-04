@@ -2,6 +2,8 @@ import os
 import uuid
 
 import pytest
+
+os.environ.setdefault("AUTH_DEV_MODE", "1")
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -29,7 +31,7 @@ def db():
 @pytest.fixture
 def client(db):
     app.dependency_overrides[get_db] = lambda: db
-    app.dependency_overrides[get_current_user] = lambda: "test@example.com"
+    app.dependency_overrides[get_current_user] = lambda: str(uuid.uuid4())
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()

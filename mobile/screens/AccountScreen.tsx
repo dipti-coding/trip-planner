@@ -1,6 +1,7 @@
 import React, {useMemo} from 'react';
-import {SafeAreaView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {Alert, SafeAreaView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import Icon from '../components/Icon';
+import {useAuth} from '../context/AuthContext';
 import {useTheme} from '../context/ThemeContext';
 import {themes, type ThemeName} from '../theme';
 import {radii, spacing, typography} from '../theme';
@@ -35,6 +36,14 @@ const swatchStyles = StyleSheet.create({
 
 export default function AccountScreen() {
   const {theme, colors, glass, themeName, setThemeName} = useTheme();
+  const {signOut} = useAuth();
+
+  function handleSignOut() {
+    Alert.alert('Sign out', 'Are you sure you want to sign out?', [
+      {text: 'Cancel', style: 'cancel'},
+      {text: 'Sign out', style: 'destructive', onPress: signOut},
+    ]);
+  }
 
   const styles = useMemo(() => StyleSheet.create({
     container:    {flex: 1, backgroundColor: colors.bgBase},
@@ -72,6 +81,14 @@ export default function AccountScreen() {
     optionText:    {flex: 1},
     optionLabel:   {fontSize: typography.base, fontWeight: typography.semibold, color: colors.textPrimary},
     optionDesc:    {fontSize: typography.bodySmall, color: colors.textSecondary, marginTop: 2},
+    logoutButton: {
+      marginHorizontal: 20, marginTop: spacing.xl,
+      paddingVertical: spacing.lg,
+      borderRadius: radii.card,
+      borderWidth: 1, borderColor: '#000',
+      alignItems: 'center',
+    },
+    logoutText: {fontSize: typography.base, fontWeight: typography.semibold, color: '#000'},
   }), [theme]);
 
   return (
@@ -106,6 +123,10 @@ export default function AccountScreen() {
           );
         })}
       </View>
+
+      <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut} activeOpacity={0.7}>
+        <Text style={styles.logoutText}>Log out</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }

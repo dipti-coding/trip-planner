@@ -119,6 +119,63 @@ The choice is effectively "managed auth service vs. rolling your own" using Post
 
 ---
 
+## Authentication Phase 2: Sign in with Apple vs Email/Password
+
+**Decision: Sign in with Apple + FastAPI JWT (access + refresh tokens)**
+
+Phase 1 used a single hardcoded email/password user in env vars — sufficient for solo development. Phase 2 moves to real multi-user auth for TestFlight distribution.
+
+### Options Evaluated
+
+**Option 1: Email + Password**
+
+- FastAPI verifies credentials against a `hashed_password` column on the `users` table
+- Requires building password reset flows, managing password security, and email verification
+
+**Pros:** Fast backend implementation; easy local dev and CI testing; works identically on iOS and Android
+
+**Cons:** Must maintain password reset, email verification, and brute-force protection; more backend surface area to secure
+
+**Option 2: Sign in with Apple**
+
+- Mobile gets an Apple identity token; FastAPI verifies it against Apple's JWKS endpoint and issues its own JWT access + refresh token pair
+- No passwords stored anywhere
+
+**Pros:** No password storage or reset flows; native iOS UX (Face ID, one-tap); lower ongoing security burden; required by App Store guidelines for apps that offer any third-party login
+
+**Cons:** More initial Apple Developer configuration; harder automated testing; users may hide their email
+
+### Comparison
+
+| | Email + Password | Sign in with Apple |
+|---|---|---|
+| Password storage | Yes (bcrypt) | No |
+| Password reset | Must build | Not needed |
+| iOS UX | Form-based | One-tap, Face ID |
+| Automated testing | Easy | Requires mocking JWKS |
+| App Store requirement | Optional | Required if offering social login |
+| **Best for** | Android / cross-platform | **iOS MVP** |
+
+### Decision
+
+Sign in with Apple for all sign-ins. `POST /auth/token` (email+password) retained but gated behind `AUTH_DEV_MODE=true` for local dev and CI — it will not be active in production.
+
+### User identifier design
+
+Apple's `sub` claim (a stable opaque user ID, e.g. `000234.abc...`) is stored as `apple_id` on the `users` table and used as the primary lookup key. This handles both sign-in paths:
+
+- **Real email path:** Apple sends `sub` + real email on first sign-in → both stored
+- **Hide My Email path:** Apple sends `sub` + relay address on first sign-in → both stored
+- **All subsequent sign-ins:** Apple sends `sub` only → user looked up by `apple_id`; email not required
+
+`email` stays on the `users` table but becomes nullable. The JWT `sub` claim holds the wandur user UUID (not the Apple ID or email).
+
+### Token strategy
+
+Access tokens valid for 60 min + long-lived refresh tokens (30 days) stored in iOS Keychain via `react-native-keychain`. The mobile client silently refreshes on 401. Refresh tokens are stored in a `refresh_tokens` table and invalidated on sign-out.
+
+---
+
 ## Booking Confirmation Parsing: Claude API vs Alternatives
 
 **Decision: Claude API — Sonnet (for MVP), revisit at scale**
