@@ -93,6 +93,7 @@ resource "aws_ecs_task_definition" "app" {
     environment = [
       { name = "JWT_EXPIRE_MINUTES", value = "60" },
       { name = "PARSE_TEST_MODE",    value = "1"  },
+      { name = "AUTH_DEV_MODE",      value = "1"  },
     ]
     logConfiguration = {
       logDriver = "awslogs"
