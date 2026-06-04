@@ -1,6 +1,8 @@
 import React, {useMemo} from 'react';
-import {SafeAreaView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {Alert, SafeAreaView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import Config from 'react-native-config';
 import Icon from '../components/Icon';
+import {useAuth} from '../context/AuthContext';
 import {useTheme} from '../context/ThemeContext';
 import {themes, type ThemeName} from '../theme';
 import {radii, spacing, typography} from '../theme';
@@ -35,6 +37,14 @@ const swatchStyles = StyleSheet.create({
 
 export default function AccountScreen() {
   const {theme, colors, glass, themeName, setThemeName} = useTheme();
+  const {signOut} = useAuth();
+
+  function handleSignOut() {
+    Alert.alert('Sign out', 'Are you sure you want to sign out?', [
+      {text: 'Cancel', style: 'cancel'},
+      {text: 'Sign out', style: 'destructive', onPress: signOut},
+    ]);
+  }
 
   const styles = useMemo(() => StyleSheet.create({
     container:    {flex: 1, backgroundColor: colors.bgBase},
@@ -106,6 +116,20 @@ export default function AccountScreen() {
           );
         })}
       </View>
+
+      {Config.AUTH_DEV_MODE !== '1' && (
+        <>
+          <Text style={styles.sectionLabel}>Account</Text>
+          <View style={styles.card}>
+            <TouchableOpacity style={styles.optionRow} onPress={handleSignOut} activeOpacity={0.7}>
+              <View style={[styles.primaryDot, {backgroundColor: colors.danger ?? '#c62828'}]}>
+                <Icon name="logout" size={16} color="#fff" />
+              </View>
+              <Text style={[styles.optionLabel, {color: colors.danger ?? '#c62828'}]}>Sign out</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
     </SafeAreaView>
   );
 }
