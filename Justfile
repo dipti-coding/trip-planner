@@ -175,7 +175,7 @@ deploy tag="latest":
     #!/usr/bin/env bash
     set -euo pipefail
     just ecr-push {{tag}}
-    cd infra && terraform apply -var="ecr_image_tag={{tag}}" -auto-approve
+    ( cd infra && terraform apply -var="ecr_image_tag={{tag}}" -auto-approve )
     CLUSTER=$(cd infra && terraform show -json | python3 -c "import sys,json; s=json.load(sys.stdin); [print(r['values']['name']) for r in s['values']['root_module']['resources'] if r['type']=='aws_ecs_cluster']")
     SERVICE=$(aws ecs list-services --cluster "$CLUSTER" --query 'serviceArns[0]' --output text | xargs basename)
     aws ecs update-service --cluster "$CLUSTER" --service "$SERVICE" --force-new-deployment --query 'service.serviceName' --output text
