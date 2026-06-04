@@ -530,6 +530,40 @@ Watch `just dev` output for the request log and any 4xx/5xx errors.
 
 ---
 
+## Testing on a Physical Device (AWS)
+
+To test against the production AWS API — for features that require a real deployment, or to run the app standalone without a local server or Wi-Fi tether:
+
+### 1. Point the app at the AWS API
+
+Edit `mobile/.env`:
+
+```
+LOCAL_API_URL=<AWS_URL>
+AUTH_DEV_MODE=1
+```
+
+Do not commit this change.
+
+### 2. Build a Release scheme in Xcode
+
+A Release build bundles the JS into the binary so the app runs standalone — no Metro, no Wi-Fi tether, works after Xcode closes.
+
+1. **Product → Scheme → Edit Scheme**
+2. Select **Run** on the left
+3. Set **Build Configuration** to **Release**
+4. Select your iPhone as the run destination and hit **Run (⌘R)**
+
+`react-native-config` bakes `.env` values at build time, so `LOCAL_API_URL` and `AUTH_DEV_MODE` are embedded in the binary — no `.env` changes take effect until the next Xcode build.
+
+With `AUTH_DEV_MODE=1` the dev sign-in button appears and authenticates against the AWS backend using `AUTH_USER_EMAIL` / `AUTH_USER_PASSWORD_HASH` from the prod environment.
+
+### Returning to local dev
+
+Restore `LOCAL_API_URL=http://<your-mac-ip>:8000` in `mobile/.env`, switch the scheme back to **Debug**, and rebuild.
+
+---
+
 ## Run Tests
 
 ```bash
