@@ -47,9 +47,6 @@ migrate:
 test:
     pytest
 
-# Tail logs (old alias kept for muscle memory)
-logs:
-    docker compose logs -f
 
 # Seed the database with test users, trips, and plans
 seed:
