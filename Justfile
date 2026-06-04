@@ -26,10 +26,10 @@ up: gen-docker-env
     docker compose up -d --build
     @echo "Waiting for Postgres to be ready..."
     @until docker compose exec postgres pg_isready -U trip_planner > /dev/null 2>&1; do sleep 1; done
-    @echo "Postgres is ready."
     @echo "Waiting for API to be ready..."
     @until curl -s http://localhost:${API_PORT:-8000}/ping > /dev/null 2>&1; do sleep 1; done
-    @echo "API is ready."
+    @echo "=== Local stack up ==="
+    curl -s http://localhost:${API_PORT:-8000}/ping | python3 -m json.tool
 
 # Stop and remove Docker containers
 down:
@@ -47,7 +47,7 @@ migrate:
 test:
     pytest
 
-# Tail Docker logs
+# Tail logs (old alias kept for muscle memory)
 logs:
     docker compose logs -f
 
@@ -59,9 +59,39 @@ seed:
 test-ocr image:
     PYTHONPATH=. python scripts/test_ocr.py {{image}}
 
-# Verify the ping endpoint is responding
+# Verify the ping endpoint is responding (local)
 ping:
     curl -s http://localhost:${API_PORT:-8000}/ping | python3 -m json.tool
+
+# Show running status — just status [prod]
+status env="local":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ "{{env}}" = "prod" ]; then
+        CLUSTER=$(cd infra && terraform show -json | python3 -c "import sys,json; s=json.load(sys.stdin); [print(r['values']['name']) for r in s['values']['root_module']['resources'] if r['type']=='aws_ecs_cluster']")
+        SERVICE=$(aws ecs list-services --cluster "$CLUSTER" --query 'serviceArns[0]' --output text | xargs basename)
+        echo "=== ECS service: $SERVICE ==="
+        aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" \
+            --query 'services[0].{running:runningCount,desired:desiredCount,pending:pendingCount,lastDeployment:deployments[0].{status:status,created:createdAt}}' \
+            --output table
+        echo "=== API ping ==="
+        curl -s "${PROD_API_URL}/ping" | python3 -m json.tool
+    else
+        echo "=== Docker containers ==="
+        docker compose ps
+        echo "=== API ping ==="
+        curl -s "http://localhost:${API_PORT:-8000}/ping" | python3 -m json.tool
+    fi
+
+# Tail logs — just logs [prod]
+logs env="local":
+    #!/usr/bin/env bash
+    if [ "{{env}}" = "prod" ]; then
+        GROUP="/ecs/${TF_VAR_app_name:-trip-planner}"
+        aws logs tail "$GROUP" --follow
+    else
+        docker compose logs -f
+    fi
 
 # List available iPhone simulators with index numbers for use with `just ios <n>`
 ios-list:
@@ -170,13 +200,27 @@ ecr-push tag="latest":
     docker push "$REPO:{{tag}}"
     echo "Pushed $REPO:{{tag}}"
 
-# Force a new ECS deployment (picks up the latest image)
-deploy tag="latest":
+# Apply infra changes and refresh secrets — run when terraform files change
+deploy-infra:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ( cd infra && terraform apply -auto-approve )
+    just push-secrets
+    echo "Infra up to date and secrets pushed."
+
+# Build, push, and deploy a new app image — run for code-only changes
+deploy-app tag="latest":
     #!/usr/bin/env bash
     set -euo pipefail
     just ecr-push {{tag}}
-    ( cd infra && terraform apply -var="ecr_image_tag={{tag}}" -auto-approve )
     CLUSTER=$(cd infra && terraform show -json | python3 -c "import sys,json; s=json.load(sys.stdin); [print(r['values']['name']) for r in s['values']['root_module']['resources'] if r['type']=='aws_ecs_cluster']")
     SERVICE=$(aws ecs list-services --cluster "$CLUSTER" --query 'serviceArns[0]' --output text | xargs basename)
     aws ecs update-service --cluster "$CLUSTER" --service "$SERVICE" --force-new-deployment --query 'service.serviceName' --output text
-    echo "Deployment triggered."
+    echo "Waiting for deployment to stabilize..."
+    aws ecs wait services-stable --cluster "$CLUSTER" --services "$SERVICE"
+    echo "=== Deploy complete ==="
+    curl -s "${PROD_API_URL}/ping" | python3 -m json.tool
+
+# Full deploy: infra + app (use when both have changed)
+deploy tag="latest": deploy-infra
+    just deploy-app {{tag}}
