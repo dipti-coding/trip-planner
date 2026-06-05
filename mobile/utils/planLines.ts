@@ -1,9 +1,12 @@
 import type {Plan} from '../types';
+import {AIRPORT_TZ} from './airportTimezones';
+import {fmtTime, fmtTimeWithTZ} from './dates';
 
 export type PlanLines = {
   heading: string;
   company: string | null;
   location: string | null;
+  timeDisplay?: string;
 };
 
 export function getPlanLines(plan: Plan): PlanLines {
@@ -21,7 +24,18 @@ export function getPlanLines(plan: Plan): PlanLines {
         d.terminal ? `Terminal ${d.terminal}` : null,
         d.gate     ? `Gate ${d.gate}`         : null,
       ].filter(Boolean).join(', ') || null;
-      return {heading: route ?? plan.title, company, location: terminal};
+      const depTz = d.departure_airport ? AIRPORT_TZ[d.departure_airport] : undefined;
+      const arrTz = d.arrival_airport   ? AIRPORT_TZ[d.arrival_airport]   : undefined;
+      let timeDisplay: string | undefined;
+      if (plan.start_datetime && depTz) {
+        const dep = fmtTimeWithTZ(plan.start_datetime, depTz);
+        timeDisplay = plan.end_datetime && arrTz
+          ? `${dep} → ${fmtTimeWithTZ(plan.end_datetime, arrTz)}`
+          : dep;
+      } else if (plan.start_datetime) {
+        timeDisplay = fmtTime(plan.start_datetime);
+      }
+      return {heading: route ?? plan.title, company, location: terminal, timeDisplay};
     }
 
     case 'Hotel':

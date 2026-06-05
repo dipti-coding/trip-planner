@@ -271,12 +271,26 @@ function AddPlanOverlay({tripId, trip, defaultDate, onClose, onAdded}: {
     setSubmitting(true); setParseError(null);
     try {
       const text: string = await OCRModule.recognizeText(imageBase64);
+      console.log('[BookingParser] OCR text:\n', text);
       if (!text.trim()) { setParseError('No text found in the screenshot. Try a clearer image.'); return; }
-      const parsed = await BookingParserModule.parseBookingText(text);
+      const tripYear = trip.start_date.slice(0, 4);
+      const textWithContext = `[Trip year: ${tripYear}. When a date has no year, use ${tripYear}.]\n\n${text}`;
+      const parsed = await BookingParserModule.parseBookingText(textWithContext);
+      console.log('[BookingParser] parsed result:', JSON.stringify(parsed, null, 2));
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        setParseError('No booking details found. Try a clearer screenshot.');
+        return;
+      }
+      if (parsed.length > 5) {
+        setParseError(`Detected ${parsed.length} plans from one screenshot — that seems wrong. Try cropping to a single booking.`);
+        return;
+      }
+      console.log('[BookingParser] POST /from-parsed-bulk payload:', JSON.stringify(parsed, null, 2));
       await client.post(`/trips/${tripId}/plans/from-parsed-bulk`, parsed);
       const res = await client.get<Plan[]>(`/trips/${tripId}/plans`);
       onAdded(res.data); onClose();
     } catch (e: any) {
+      console.warn('[BookingParser] error:', e?.response?.data ?? e?.message ?? e);
       const detail = e.response?.data?.detail;
       setParseError(typeof detail === 'string' ? detail : e.message ?? 'Could not detect plan type.');
     } finally { setSubmitting(false); }
