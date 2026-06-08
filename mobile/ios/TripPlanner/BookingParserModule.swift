@@ -3,9 +3,12 @@ import FoundationModels
 
 // MARK: - Date parser
 
-private let _isoFormatter: ISO8601DateFormatter = {
-  let f = ISO8601DateFormatter()
-  f.formatOptions = [.withInternetDateTime]
+// Outputs local wall-clock time with no timezone — matches the contract expected by
+// fmtTime on the frontend ("YYYY-MM-DDTHH:MM:SS", no Z, no offset).
+private let _wallClockFormatter: DateFormatter = {
+  let f = DateFormatter()
+  f.locale = Locale(identifier: "en_US_POSIX")
+  f.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
   return f
 }()
 
@@ -14,29 +17,44 @@ private let _dateFormats = [
   "EEEE, MMMM d, yyyy 'at' h:mm a", "EEEE, MMMM d, yyyy",
   "EEE, MMM d, yyyy 'at' h:mm a", "EEE, MMM d, yyyy",
   "MMMM d, yyyy 'at' h:mm a", "MMMM d, yyyy",
-  "MMM d, yyyy", "d MMM yyyy",
+  "MMM d, yyyy 'at' h:mm a", "MMM d, yyyy",
+  "MMM d 'at' h:mm a", "MMM d h:mm a",
+  "h:mm a MMM d, yyyy", "h:mm a MMM d",
+  "MMM d", "d MMM yyyy",
   "MM/dd/yyyy", "MM/dd/yy",
   "EEE, MMM d 'at' h:mm a", "EEE, MMM d",
 ]
 
 private func toISO(_ raw: String) -> String? {
-  let s = raw.trimmingCharacters(in: .whitespaces)
-  if _isoFormatter.date(from: s) != nil { return s }
-  let out = ISO8601DateFormatter()
-  out.formatOptions = [.withInternetDateTime]
+  var s = raw.trimmingCharacters(in: .whitespaces)
+
+  // Strip any timezone designator before parsing. Booking times in screenshots are local
+  // wall-clock; keeping Z or ±HH:MM causes the formatter to treat them as UTC and shift
+  // the time (e.g. 1:30 PM PDT → stored as 8:30 PM, displayed as 8:30 PM).
+  if s.hasSuffix("Z") {
+    s = String(s.dropLast())
+  } else if s.count >= 6 {
+    let tail = s.suffix(6)
+    if tail.first == "+" || tail.first == "-" { s = String(s.dropLast(6)) }
+  }
+
   let cal = Calendar.current
-  let currentYear = cal.component(.year, from: Date())
+  let now = Date()
+  let currentYear = cal.component(.year, from: now)
+  let oneYearAgo = cal.date(byAdding: .year, value: -1, to: now) ?? now
+
   for fmt in _dateFormats {
     let df = DateFormatter()
     df.locale = Locale(identifier: "en_US_POSIX")
     df.dateFormat = fmt
     if let date = df.date(from: s) {
       var comps = cal.dateComponents([.year, .month, .day, .hour, .minute], from: date)
-      if (comps.year ?? 0) < 2000 {
+      // Fix year-0 (format has no year) or stale year (model hallucinated a past year).
+      if (comps.year ?? 0) < 2000 || (cal.date(from: comps).map { $0 < oneYearAgo } ?? false) {
         comps.year = currentYear
-        if let nudged = cal.date(from: comps), nudged < Date() { comps.year = currentYear + 1 }
+        if let nudged = cal.date(from: comps), nudged < now { comps.year = currentYear + 1 }
       }
-      return out.string(from: cal.date(from: comps) ?? date)
+      return _wallClockFormatter.string(from: cal.date(from: comps) ?? date)
     }
   }
   return nil
@@ -100,37 +118,10 @@ class BookingParserModule: NSObject {
 
     // Use free-form generation — ask for JSON directly.
     // This is more reliable than @Generable structured generation on-device.
-    let session = LanguageModelSession(instructions:
-      "You are a travel booking parser. Extract information from booking confirmation text " +
-      "and return ONLY a valid JSON array — no explanation, no markdown, just the JSON."
-    )
-
-    let prompt = """
-      Extract booking details from the text below. Return a JSON ARRAY where each element \
-      is one booking item. For multi-leg flights return one object per leg; for all other \
-      booking types return a single-element array. Use null for missing fields.
-
-      Each element must follow this schema:
-      {
-        "planType": "<Flight|Hotel|CarReservation|Tour|Cruise|Ferry|RailwayRide|BusRide|LocalEvent|Restaurant|Activity>",
-        "title": "<short display title>",
-        "startDate": "<ISO 8601 or null>",
-        "endDate": "<ISO 8601 or null>",
-        "confirmation": "<code or null>",
-        "primaryName": "<airline|hotel|rental co|operator|venue or null>",
-        "secondaryInfo": "<flight no|room type|car type|event name or null>",
-        "origin": "<dep airport|station|port or null>",
-        "destination": "<arr airport|station|port or null>",
-        "seat": "<seat or null>",
-        "serviceClass": "<Economy|Business|King Suite etc or null>"
-      }
-
-      Text:
-      \(truncated)
-      """
+    let session = LanguageModelSession(instructions: BookingParserPrompt.system)
 
     do {
-      let response = try await session.respond(to: prompt)
+      let response = try await session.respond(to: BookingParserPrompt.user(text: truncated))
       return try Self.parseJSONArray(response.content)
     } catch {
       // GenerationError is bridged as NSError; don't expose the raw framework message.

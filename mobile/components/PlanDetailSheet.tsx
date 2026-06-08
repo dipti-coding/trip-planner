@@ -13,7 +13,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from './Icon';
 import {useTheme} from '../context/ThemeContext';
 import type {Plan} from '../types';
-import {fmtTime, fmtDuration} from '../utils/dates';
+import {fmtTime} from '../utils/dates';
 import {getPlanLines, getDetailRows, getMapsQuery} from '../utils/planLines';
 import {radii, spacing, typography} from '../theme';
 
@@ -109,7 +109,6 @@ export default function PlanDetailSheet({plan, onClose, onDelete}: Props) {
 
   const meta      = typeMeta[plan.type] ?? defaultMeta;
   const time      = fmtTime(plan.start_datetime);
-  const dur       = fmtDuration(plan.start_datetime, plan.end_datetime);
   const {heading, company} = getPlanLines(plan);
   const rows      = getDetailRows(plan);
   const mapsQuery = getMapsQuery(plan);
@@ -141,8 +140,8 @@ export default function PlanDetailSheet({plan, onClose, onDelete}: Props) {
                 </View>
               </View>
               <View style={styles.heroContent}>
-                {(time || dur) ? (
-                  <Text style={styles.heroTime}>{[time, dur].filter(Boolean).join('  ·  ')}</Text>
+                {time ? (
+                  <Text style={styles.heroTime}>{time}</Text>
                 ) : null}
                 <Text style={styles.heroHeading} numberOfLines={2}>{heading}</Text>
                 {company ? <Text style={styles.heroCompany} numberOfLines={1}>{company}</Text> : null}

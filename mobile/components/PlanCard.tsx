@@ -15,9 +15,9 @@ type Props = {
 export default function PlanCard({plan, onPress}: Props) {
   const {theme, colors, typeMeta, defaultMeta} = useTheme();
   const meta = typeMeta[plan.type] ?? defaultMeta;
-  const time = fmtTime(plan.start_datetime);
-  const dur  = fmtDuration(plan.start_datetime, plan.end_datetime);
-  const {heading, company, location} = getPlanLines(plan);
+  const {heading, company, location, timeDisplay} = getPlanLines(plan);
+  const time = timeDisplay ?? fmtTime(plan.start_datetime);
+  const dur  = timeDisplay ? null : fmtDuration(plan.start_datetime, plan.end_datetime);
 
   const styles = useMemo(() => StyleSheet.create({
     card: {
@@ -47,13 +47,13 @@ export default function PlanCard({plan, onPress}: Props) {
         <Icon name={meta.icon} size={24} color={meta.color}/>
       </View>
       <View style={styles.content}>
+        <Text style={styles.heading} numberOfLines={1}>{heading}</Text>
         {time ? (
-          <View style={styles.timeRow}>
+          <View style={[styles.timeRow, {marginTop: 2}]}>
             <Text style={styles.timeText}>{time}</Text>
             {dur ? <Text style={styles.durText}>{' · ' + dur}</Text> : null}
           </View>
         ) : null}
-        <Text style={styles.heading} numberOfLines={1}>{heading}</Text>
         {company  ? <Text style={styles.company}  numberOfLines={1}>{company}</Text>  : null}
         {location ? <Text style={styles.location} numberOfLines={1}>{location}</Text> : null}
       </View>

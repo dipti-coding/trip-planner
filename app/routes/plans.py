@@ -116,8 +116,17 @@ def create_plan_from_parsed(trip_id: UUID, body: PlanCreate, db: Session = Depen
     return plan
 
 
+_MAX_PARSED_PLANS = 5
+
 @router.post("/trips/{trip_id}/plans/from-parsed-bulk", response_model=list[PlanResponse], status_code=201)
 def create_plans_from_parsed_bulk(trip_id: UUID, body: list[PlanCreate], db: Session = Depends(get_db), _: str = Depends(get_current_user)):
+    if not body:
+        raise HTTPException(status_code=422, detail="No plans provided")
+    if len(body) > _MAX_PARSED_PLANS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"A single screenshot should not produce more than {_MAX_PARSED_PLANS} plans (got {len(body)}). Try cropping to a single booking.",
+        )
     trip = db.query(Trip).filter(Trip.id == trip_id).first()
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
