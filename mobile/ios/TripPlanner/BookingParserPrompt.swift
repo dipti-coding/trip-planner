@@ -22,7 +22,7 @@ enum BookingParserPrompt {
 
     Each element must follow this schema:
     {
-      "planType": "<Flight|Hotel|CarReservation|Tour|Cruise|Ferry|RailwayRide|BusRide|LocalEvent|Restaurant|Activity>",
+      "planType": "<Flight|Hotel|CarReservation|Cruise|Ferry|RailwayRide|BusRide|Restaurant|Activity|Meeting>",
       "title": "<short display title>",
       "startDate": "<departure/check-in datetime in ISO 8601 — use the time value as shown in the text, do not convert timezones>",
       "endDate": "<arrival/check-out datetime in ISO 8601, or null. For flights this is the arrival time, which may appear on the right side of the route display or labeled 'arrives'>",
