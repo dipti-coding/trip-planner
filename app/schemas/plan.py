@@ -20,14 +20,11 @@ from app.schemas.plan_details import (
     MeetingDetails,
     FlightDetails,
     HotelDetails,
-    TourDetails,
     CarReservationDetails,
     CruiseDetails,
     FerryDetails,
-    MapDestinationDetails,
     RailwayRideDetails,
     BusRideDetails,
-    LocalEventDetails,
 )
 
 # Maps each PlanType to its details schema for validation and parsing
@@ -37,14 +34,11 @@ PLAN_DETAILS_SCHEMA = {
     PlanType.Meeting: MeetingDetails,
     PlanType.Flight: FlightDetails,
     PlanType.Hotel: HotelDetails,
-    PlanType.Tour: TourDetails,
     PlanType.CarReservation: CarReservationDetails,
     PlanType.Cruise: CruiseDetails,
     PlanType.Ferry: FerryDetails,
-    PlanType.MapDestination: MapDestinationDetails,
     PlanType.RailwayRide: RailwayRideDetails,
     PlanType.BusRide: BusRideDetails,
-    PlanType.LocalEvent: LocalEventDetails,
 }
 
 

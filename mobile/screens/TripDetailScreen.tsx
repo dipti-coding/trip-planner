@@ -35,6 +35,7 @@ import type {Plan, Trip} from '../types';
 import {dateRange, fmtDow, fmtDayLabel, fmtDayNum, fmtShort, fmtTime, fmtTime24} from '../utils/dates';
 import type {RootStackParamList} from '../App';
 import {radii, spacing, typography} from '../theme';
+import {PLAN_TYPE_LABEL} from '../assets/planTypes';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'TripDetail'>;
@@ -244,7 +245,7 @@ function AddPlanOverlay({tripId, trip, defaultDate, onClose, onAdded}: {
     detectLabel:  {fontSize: typography.base, fontWeight: typography.medium, color: colors.textPrimary},
     detectSub:    {fontSize: typography.bodySmall, color: colors.textSecondary},
     fieldLabel:   {fontSize: typography.bodySmall, color: colors.textSecondary, marginBottom: spacing.sm},
-    typeRow:      {flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginBottom: spacing.xl},
+    typeRow:      {flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginBottom: spacing.xl, justifyContent: 'center'},
     typeBtn:      {width: '22%', alignItems: 'center', paddingVertical: spacing.lg, borderWidth: 1, borderColor: colors.border, borderRadius: radii.xl, gap: spacing.sm, backgroundColor: colors.surface},
     typeBtnActive: {borderColor: colors.accent, backgroundColor: colors.accentXSubtle},
     typeBtnLabel: {fontSize: typography.bodySmall, color: colors.textSecondary},
@@ -383,7 +384,7 @@ function AddPlanOverlay({tripId, trip, defaultDate, onClose, onAdded}: {
               {allPlanTypes.map(t => (
                 <TouchableOpacity key={t} style={[s.typeBtn, manualType === t && s.typeBtnActive]} onPress={() => setManualType(t)} activeOpacity={0.7}>
                   <Icon name={typeMeta[t].icon} size={22} color={manualType === t ? colors.accent : colors.textSecondary}/>
-                  <Text style={[s.typeBtnLabel, manualType === t && s.typeBtnLabelActive]}>{t}</Text>
+                  <Text style={[s.typeBtnLabel, manualType === t && s.typeBtnLabelActive]}>{PLAN_TYPE_LABEL[t] ?? t}</Text>
                 </TouchableOpacity>
               ))}
             </View>

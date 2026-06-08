@@ -39,14 +39,6 @@ class HotelDetails(BaseModel):
     loyalty_number: str | None = None
 
 
-class TourDetails(BaseModel):
-    operator: str | None = None
-    confirmation: str | None = None
-    meeting_point: str | None = None
-    group_size: int | None = None
-    includes: list[str] = []
-
-
 class CarReservationDetails(BaseModel):
     rental_company: str | None = None
     confirmation: str | None = None
@@ -75,11 +67,6 @@ class FerryDetails(BaseModel):
     seat_class: str | None = None
 
 
-class MapDestinationDetails(BaseModel):
-    address: str | None = None
-    category: str | None = None
-
-
 class RailwayRideDetails(BaseModel):
     operator: str | None = None
     train_number: str | None = None
@@ -99,8 +86,3 @@ class BusRideDetails(BaseModel):
     seat: str | None = None
 
 
-class LocalEventDetails(BaseModel):
-    venue: str | None = None
-    confirmation: str | None = None
-    seat: str | None = None
-    event_type: str | None = None

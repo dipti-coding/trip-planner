@@ -50,9 +50,6 @@ export function getPlanLines(plan: Plan): PlanLines {
     case 'Activity':
       return {heading: plan.title, company: null, location: d.location ?? null};
 
-    case 'Tour':
-      return {heading: plan.title, company: d.operator ?? null, location: d.meeting_point ?? null};
-
     case 'CarReservation': {
       const route = d.pickup_location && d.dropoff_location
         ? `${d.pickup_location} → ${d.dropoff_location}`
@@ -89,12 +86,6 @@ export function getPlanLines(plan: Plan): PlanLines {
         : null;
       return {heading: route ?? plan.title, company: d.cruise_line ?? null, location: d.ship_name ?? null};
     }
-
-    case 'LocalEvent':
-      return {heading: plan.title, company: d.event_type ?? null, location: d.venue ?? null};
-
-    case 'MapDestination':
-      return {heading: plan.title, company: d.category ?? null, location: d.address ?? null};
 
     case 'Meeting':
       return {heading: plan.title, company: d.organizer ?? null, location: null};
@@ -153,15 +144,6 @@ export function getDetailRows(plan: Plan): DetailRow[] {
       add('doc', 'Notes', d.notes);
       break;
 
-    case 'Tour':
-      add('flag', 'Operator', d.operator);
-      add('map-pin', 'Meeting point', d.meeting_point);
-      if (d.group_size) add('user', 'Group size', `${d.group_size} people`);
-      if (Array.isArray(d.includes) && d.includes.length)
-        add('check', 'Includes', d.includes.join(', '));
-      add('check', 'Confirmation', d.confirmation, true);
-      break;
-
     case 'CarReservation':
       add('flag', 'Company', d.rental_company);
       add('route', 'Car type', d.car_type);
@@ -209,18 +191,6 @@ export function getDetailRows(plan: Plan): DetailRow[] {
       add('check', 'Confirmation', d.confirmation, true);
       break;
 
-    case 'LocalEvent':
-      add('flag', 'Type', d.event_type);
-      add('map-pin', 'Venue', d.venue);
-      add('star', 'Seat', d.seat);
-      add('check', 'Confirmation', d.confirmation, true);
-      break;
-
-    case 'MapDestination':
-      add('map-pin', 'Address', d.address);
-      add('star', 'Category', d.category);
-      break;
-
     case 'Meeting':
       add('user', 'Organizer', d.organizer);
       if (Array.isArray(d.attendees) && d.attendees.length)
@@ -241,12 +211,6 @@ export function getMapsQuery(plan: Plan): string | null {
       return plan.title;
     case 'Activity':
       return d.location ?? null;
-    case 'Tour':
-      return d.meeting_point ?? null;
-    case 'LocalEvent':
-      return d.venue ?? null;
-    case 'MapDestination':
-      return d.address ?? null;
     case 'CarReservation':
       return d.pickup_location ?? null;
     case 'RailwayRide':
