@@ -176,32 +176,43 @@ Access tokens valid for 60 min + long-lived refresh tokens (30 days) stored in i
 
 ---
 
-## Booking Confirmation Parsing: Claude API vs Alternatives
+## Booking Confirmation Parsing: LLM Provider vs On-Device
 
-**Decision: Claude API — Sonnet (for MVP), revisit at scale**
+**Decision: Apple Intelligence (on-device, iOS 26) via FoundationModels framework**
 
-Booking confirmations have no standard format. A United Airlines confirmation looks completely different from Delta, and Marriott looks nothing like Airbnb. Any non-LLM approach requires maintaining provider-specific patterns.
+Booking confirmations have no standard format. A United Airlines confirmation looks completely different from Delta, and Marriott looks nothing like Airbnb. Any non-LLM approach requires maintaining provider-specific patterns indefinitely.
 
 ### Options Evaluated
 
-| Option | Cost | Reliability | Maintenance | Decision |
-|---|---|---|---|---|
-| Claude API (Sonnet) | ~$0.007/call | High | None | **Selected for MVP** |
-| Gemini API | Free tier available | High | None | Valid swap if cost is a concern |
-| TripIt API | Paid (~$299/mo flat) | Very high | None | Post-MVP — email forwarding only, not paste-box |
-| Regex / rule-based | Free | Low | High | Avoided — breaks when providers change templates |
-| spaCy / NLTK | Free | Medium | Medium | Supplement only — no booking context awareness |
-| Ollama (local LLM) | Server cost | Medium | Medium | Post-MVP at scale — adds infrastructure complexity |
+| Option | Cost | Privacy | Reliability | Maintenance | Decision |
+|---|---|---|---|---|---|
+| **Apple Intelligence (on-device)** | **Free** | **Full — data never leaves device** | High (iOS 26+) | None | **Selected** |
+| Claude API (Sonnet) | ~$0.007/call | Data sent to Anthropic servers | High | None | Strong fallback if on-device coverage is low |
+| Gemini API | Free tier available | Data sent to Google servers | High | None | Valid swap for non-iOS or Android |
+| TripIt API | Paid (~$299/mo flat) | Data sent to TripIt servers | Very high | None | Post-MVP — email forwarding only, not screenshot |
+| Regex / rule-based | Free | Full | Low | High | Avoided — breaks when providers change templates |
+| Ollama (local LLM) | Server cost | Full (self-hosted) | Medium | Medium | Post-MVP at scale — adds infrastructure complexity |
 
-### Cost Analysis (Claude Sonnet)
+### Why On-Device Won
 
-| Token type | Estimated tokens | Cost |
-|---|---|---|
-| Input (system prompt + pasted text) | ~800 tokens | ~$0.0024 |
-| Output (structured plan JSON) | ~300 tokens | ~$0.0045 |
-| **Total per call** | | **~$0.007** |
+**Cost:** Zero marginal cost per parse regardless of scale. No API key, no billing, no rate limits to manage.
 
-**Monthly cost at scale:**
+**Privacy:** Booking confirmations contain confirmation codes, loyalty numbers, and travel dates. Processing entirely on-device means this data never leaves the user's phone. A material advantage for a travel app where sensitive itinerary data is the core content.
+
+**Latency:** On-device inference avoids a round-trip to an external API. Even with the multi-stage pipeline (2–3 model calls), total time is comparable to a single cloud API call over a slow connection.
+
+**No backend dependency:** Parsing happens in the iOS native module (`BookingParserModule.swift`) before any data reaches the server. The backend receives pre-structured `PlanCreate` objects via `POST /trips/{id}/plans/from-parsed-bulk` — it never sees raw OCR text.
+
+### Constraints and Mitigations
+
+| Constraint | Mitigation |
+|---|---|
+| Requires iOS 26+ with Apple Intelligence enabled | `isAvailable()` check gates the feature; screenshot upload falls back gracefully with a "not available" message |
+| Unavailable on simulator | Expected — tested on physical device only |
+| 3,000-char context window | OCR text truncated before prompting; booking confirmations rarely exceed this |
+| Model quality below GPT-4/Sonnet class | Mitigated by the multi-stage pipeline — focused single-task prompts outperform a broad prompt on smaller models |
+
+### Cost comparison if Claude API were used instead
 
 | Active users | Avg parses/user/month | Total calls | Est. monthly cost |
 |---|---|---|---|
@@ -209,13 +220,99 @@ Booking confirmations have no standard format. A United Airlines confirmation lo
 | 1,000 | 10 | 10,000 | ~$70 |
 | 10,000 | 10 | 100,000 | ~$700 |
 
-**Cost controls:**
-- Rate limit: 10 parses per user per day
-- Prompt caching: cache the system prompt — reused on every call, reduces input token cost ~90% on the cached portion
-- Hard monthly spend cap in the Anthropic console
+**Break-even vs TripIt API:** TripIt becomes cheaper beyond ~40,000 parse calls/month. On-device has no break-even — it is always free.
 
-**Break-even vs TripIt API:** TripIt becomes cheaper beyond ~40,000 parse calls/month (~4,000 active users parsing 10x/month). Claude API is the right choice through early growth.
+### Upgrade path
 
+If Apple Intelligence availability proves too low among real users (e.g. older devices, regions where it's unavailable), the pipeline can fall back to the Claude API with minimal code change — `runPrompt()` in `shared.ts` would call the Anthropic API instead of `BookingParserModule.runPrompt()`. All prompt logic, stage structure, and response parsing remain identical.
+
+
+## On-Device Booking Parser: Single Prompt vs Multi-Stage Pipeline
+
+**Decision: JS-orchestrated multi-stage pipeline per plan type**
+
+The initial parser sent one prompt to Apple Intelligence regardless of booking type. This caused accuracy issues — particularly flight leg miscounting, wrong datetime associations, and confusion between check-in and check-out dates for hotels.
+
+### Options Evaluated
+
+**Option 1: Single mega-prompt (original approach)**
+
+One `LanguageModelSession` call with a unified schema covering all plan types. The prompt included flight leg counting rules alongside hotel, car rental, and other type fields.
+
+**Pros:** Simple — one native call, one JSON parse, minimal latency.
+
+**Cons:** The on-device model (Apple Intelligence) performs better with narrow, focused tasks. A prompt that asks it to simultaneously determine plan type, count flight legs, parse dates, and extract confirmation numbers across all booking types is too broad. Each concern competes for model attention.
+
+---
+
+**Option 2: Heuristic pre-classifier → specialized single prompt**
+
+A Swift/regex function inspects OCR text for keywords (airport codes, "check-in", "departure") to detect type without an LLM call, then routes to a type-specific single prompt.
+
+**Pros:** No extra LLM call for classification; total latency stays near baseline.
+
+**Cons:** Regex classification misfires on ambiguous text (e.g. a hotel near an airport). Still one large prompt per type — not truly focused. The classifier and prompts live in two different places (Swift + Swift), making updates fragmented.
+
+---
+
+**Option 3: Multi-turn session pipeline (all in Swift)**
+
+Single `LanguageModelSession` with multiple sequential `respond(to:)` calls. The session retains OCR text as context across turns.
+
+**Pros:** OCR text sent once; follow-up turns are small focused questions; natural conversation flow.
+
+**Cons:** All pipeline logic is in Swift — harder to iterate on prompts, no console.log debugging, no TypeScript types on intermediate results. Adding a new type means modifying a native file and rebuilding.
+
+---
+
+**Option 4: JS-orchestrated pipeline with focused native calls (selected)**
+
+A generic `runPrompt(userPrompt, systemPrompt)` Swift method wraps `LanguageModelSession` and returns the raw response string. JS drives the entire pipeline: type detection → type-specific stages → result assembly.
+
+**Pros:**
+- Each LLM call has one job: classify, or extract dates, or extract details — not all three at once
+- Pipeline logic, prompts, and response parsing all live in TypeScript — fast iteration with no native rebuild
+- Hotel and Car stages that don't depend on each other run in `Promise.all` (parallel, not sequential)
+- Single responsibility enforced at the file level: one file per stage, one file per parser
+
+**Cons:**
+- 2–3 sequential LLM calls per import adds latency (~2–4s extra for flights). Accepted — accuracy improvement is worth it for a feature that runs once per booking screenshot.
+- OCR text is re-sent with each `runPrompt` call (no shared session context). Acceptable given the 3,000-char truncation limit.
+
+### Pipeline structure
+
+```
+detectPlanType (1 call, all types)
+  └─ Flight     extractFlightLegs (1 call) → extractFlightDetails (1 call, sequential)
+  └─ Hotel      extractHotelDates + extractHotelDetails (2 calls, parallel)
+  └─ Car        extractCarLocations + extractCarDetails (2 calls, parallel)
+  └─ Others     parseBookingText (original Swift parser, 1 call)
+```
+
+Flight stages are sequential because `extractFlightDetails` doesn't need to wait for leg structure. Hotel and Car stages are parallel because neither depends on the other's output.
+
+### File layout
+
+```
+mobile/utils/booking/
+  index.ts              — detectPlanType, parseBooking (orchestrator)
+  shared.ts             — runPrompt, ParsedPlan type, utilities
+  flight/extractLegs.ts, extractDetails.ts, parser.ts
+  hotel/extractDates.ts, extractDetails.ts, parser.ts
+  car/extractLocations.ts, extractDetails.ts, parser.ts
+  generic/parser.ts     — fallback to Swift parseBookingText
+```
+
+### Latency profile
+
+| Type | LLM calls | Approximate added latency |
+|---|---|---|
+| Flight | 3 (detect + legs + details) | ~3–5s |
+| Hotel | 3 (detect + dates + details, parallel) | ~2–3s |
+| Car | 3 (detect + locations + details, parallel) | ~2–3s |
+| Other | 2 (detect + generic) | ~1–2s |
+
+---
 
 ## Plan `details` Field: JSON vs JSONB
 

@@ -36,7 +36,7 @@ import {dateRange, fmtDow, fmtDayLabel, fmtDayNum, fmtShort, fmtTime, fmtTime24}
 import type {RootStackParamList} from '../App';
 import {radii, spacing, typography} from '../theme';
 import {PLAN_TYPE_LABEL} from '../assets/planTypes';
-import {parseBooking} from '../utils/bookingPipeline';
+import {parseBooking} from '../utils/booking';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'TripDetail'>;
