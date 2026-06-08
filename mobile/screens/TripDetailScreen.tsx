@@ -36,6 +36,7 @@ import {dateRange, fmtDow, fmtDayLabel, fmtDayNum, fmtShort, fmtTime, fmtTime24}
 import type {RootStackParamList} from '../App';
 import {radii, spacing, typography} from '../theme';
 import {PLAN_TYPE_LABEL} from '../assets/planTypes';
+import {parseBooking} from '../utils/bookingPipeline';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'TripDetail'>;
@@ -275,8 +276,7 @@ function AddPlanOverlay({tripId, trip, defaultDate, onClose, onAdded}: {
       console.log('[BookingParser] OCR text:\n', text);
       if (!text.trim()) { setParseError('No text found in the screenshot. Try a clearer image.'); return; }
       const tripYear = trip.start_date.slice(0, 4);
-      const textWithContext = `[Trip year: ${tripYear}. When a date has no year, use ${tripYear}.]\n\n${text}`;
-      const parsed = await BookingParserModule.parseBookingText(textWithContext);
+      const parsed = await parseBooking(text, tripYear);
       console.log('[BookingParser] parsed result:', JSON.stringify(parsed, null, 2));
       if (!Array.isArray(parsed) || parsed.length === 0) {
         setParseError('No booking details found. Try a clearer screenshot.');

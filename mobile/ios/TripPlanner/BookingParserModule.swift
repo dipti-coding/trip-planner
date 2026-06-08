@@ -82,6 +82,25 @@ class BookingParserModule: NSObject {
   }
 
   @objc
+  func runPrompt(_ userPrompt: String,
+                 systemPrompt: String,
+                 resolve: @escaping RCTPromiseResolveBlock,
+                 reject: @escaping RCTPromiseRejectBlock) {
+    if #available(iOS 26.0, *) {
+      Task {
+        do {
+          let result = try await Self.runSinglePrompt(userPrompt: userPrompt, systemPrompt: systemPrompt)
+          resolve(result)
+        } catch {
+          reject("PARSE_ERROR", error.localizedDescription, error)
+        }
+      }
+    } else {
+      reject("PARSER_NOT_READY", "Apple Foundation Models requires iOS 26 or later", nil)
+    }
+  }
+
+  @objc
   func parseBookingText(_ text: String,
                         resolve: @escaping RCTPromiseResolveBlock,
                         reject: @escaping RCTPromiseRejectBlock) {
@@ -96,6 +115,29 @@ class BookingParserModule: NSObject {
       }
     } else {
       reject("PARSER_NOT_READY", "Apple Foundation Models requires iOS 26 or later", nil)
+    }
+  }
+
+  @available(iOS 26.0, *)
+  private static func runSinglePrompt(userPrompt: String, systemPrompt: String) async throws -> String {
+    switch SystemLanguageModel.default.availability {
+    case .unavailable(let reason):
+      throw NSError(
+        domain: "BookingParser", code: 2,
+        userInfo: [NSLocalizedDescriptionKey: "Apple Intelligence unavailable: \(reason)"]
+      )
+    case .available:
+      break
+    }
+    let session = LanguageModelSession(instructions: systemPrompt)
+    do {
+      let response = try await session.respond(to: userPrompt)
+      return response.content
+    } catch {
+      throw NSError(
+        domain: "BookingParser", code: 5,
+        userInfo: [NSLocalizedDescriptionKey: "Could not read the screenshot. Try a clearer booking confirmation image."]
+      )
     }
   }
 
@@ -116,12 +158,42 @@ class BookingParserModule: NSObject {
     let maxChars = 3_000
     let truncated = text.count > maxChars ? String(text.prefix(maxChars)) : text
 
-    // Use free-form generation — ask for JSON directly.
-    // This is more reliable than @Generable structured generation on-device.
-    let session = LanguageModelSession(instructions: BookingParserPrompt.system)
+    let systemPrompt = "You are a travel booking parser. Extract information from booking confirmation text and return ONLY a valid JSON array — no explanation, no markdown, just the JSON."
+    let userPrompt = """
+      Extract booking details from the text below. Return a JSON ARRAY where each element \
+      is one booking item. Use null for missing fields.
+
+      FLIGHT LEG COUNTING RULES (read carefully):
+      - A single nonstop flight with one departure and one arrival is EXACTLY ONE element.
+      - Only return multiple flight elements when the passenger must change planes \
+        (e.g. LAX→ORD then ORD→STL = two elements). A seat-assignment section that \
+        repeats the same route is NOT a separate leg.
+      - Do NOT invent a return leg. Only extract flights explicitly shown as departures \
+        in this confirmation.
+      - For all non-flight booking types, return a single-element array.
+
+      Each element must follow this schema:
+      {
+        "planType": "<Flight|Hotel|CarReservation|Cruise|Ferry|RailwayRide|BusRide|Restaurant|Activity|Meeting>",
+        "title": "<short display title>",
+        "startDate": "<departure/check-in datetime in ISO 8601 — use the time value as shown in the text, do not convert timezones>",
+        "endDate": "<arrival/check-out datetime in ISO 8601, or null>",
+        "confirmation": "<confirmation code or null>",
+        "primaryName": "<airline|hotel|rental co|operator|venue or null>",
+        "secondaryInfo": "<flight number only (e.g. WN2400)|room type|car type — NOT a date or route>",
+        "origin": "<departure airport IATA code|station|port or null>",
+        "destination": "<arrival airport IATA code|station|port or null>",
+        "seat": "<seat number or null>",
+        "serviceClass": "<Economy|Business|King Suite etc or null>"
+      }
+
+      Text:
+      \(truncated)
+      """
+    let session = LanguageModelSession(instructions: systemPrompt)
 
     do {
-      let response = try await session.respond(to: BookingParserPrompt.user(text: truncated))
+      let response = try await session.respond(to: userPrompt)
       return try Self.parseJSONArray(response.content)
     } catch {
       // GenerationError is bridged as NSError; don't expose the raw framework message.
@@ -185,7 +257,6 @@ class BookingParserModule: NSObject {
       case "Hotel":          set("room_type",        info)
       case "CarReservation": set("car_type",         info)
       case "Cruise":         set("ship_name",        info)
-      case "LocalEvent":     set("event_type",       info)
       case "RailwayRide":    set("train_number",     info)
       default: break
       }
