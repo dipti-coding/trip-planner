@@ -15,14 +15,11 @@ class PlanType(str, enum.Enum):
     Meeting = "Meeting"
     Flight = "Flight"
     Hotel = "Hotel"
-    Tour = "Tour"
     CarReservation = "CarReservation"
     Cruise = "Cruise"
     Ferry = "Ferry"
-    MapDestination = "MapDestination"
     RailwayRide = "RailwayRide"
     BusRide = "BusRide"
-    LocalEvent = "LocalEvent"
 
 
 class Plan(Base):

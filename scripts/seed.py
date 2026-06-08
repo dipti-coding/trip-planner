@@ -112,33 +112,6 @@ def seed() -> None:
             ),
             Plan(
                 trip_id=trip.id,
-                type=PlanType.Tour,
-                title="Tsukiji Market Food Tour",
-                start_datetime=datetime(2026, 6, 18, 7, 0, tzinfo=timezone.utc),
-                end_datetime=datetime(2026, 6, 18, 10, 0, tzinfo=timezone.utc),
-                details={
-                    "operator": "Tokyo Food Tours",
-                    "confirmation": "TFT8821",
-                    "meeting_point": "Tsukiji Outer Market main entrance",
-                    "group_size": 8,
-                    "includes": ["breakfast", "tasting samples", "guided walk"],
-                },
-            ),
-            Plan(
-                trip_id=trip.id,
-                type=PlanType.LocalEvent,
-                title="Sumo Tournament — Ryogoku Kokugikan",
-                start_datetime=datetime(2026, 6, 20, 14, 0, tzinfo=timezone.utc),
-                end_datetime=datetime(2026, 6, 20, 18, 0, tzinfo=timezone.utc),
-                details={
-                    "venue": "Ryogoku Kokugikan",
-                    "confirmation": "SUMO456",
-                    "seat": "East Block Row 5",
-                    "event_type": "Sports",
-                },
-            ),
-            Plan(
-                trip_id=trip.id,
                 type=PlanType.CarReservation,
                 title="Rental Car — Kyoto Day Trip",
                 start_datetime=datetime(2026, 6, 21, 8, 0, tzinfo=timezone.utc),
