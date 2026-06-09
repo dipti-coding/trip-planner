@@ -33,8 +33,19 @@ export function str(v: any): string | undefined {
   return String(v);
 }
 
-export async function runPrompt(systemPrompt: string, userPrompt: string): Promise<string> {
-  return BookingParserModule.runPrompt(userPrompt, systemPrompt);
+export const PROMPT_RETRY_COUNT = 1;
+
+export async function runPrompt(systemPrompt: string, userPrompt: string, retries = PROMPT_RETRY_COUNT): Promise<string> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await BookingParserModule.runPrompt(userPrompt, systemPrompt);
+    } catch (err) {
+      lastError = err;
+      console.log(`[BookingParser] attempt ${attempt + 1}/${retries + 1} failed:`, (err as any)?.message);
+    }
+  }
+  throw lastError;
 }
 
 export async function runGenericParser(textWithContext: string): Promise<any[]> {

@@ -163,14 +163,7 @@ class BookingParserModule: NSObject {
       Extract booking details from the text below. Return a JSON ARRAY where each element \
       is one booking item. Use null for missing fields.
 
-      FLIGHT LEG COUNTING RULES (read carefully):
-      - A single nonstop flight with one departure and one arrival is EXACTLY ONE element.
-      - Only return multiple flight elements when the passenger must change planes \
-        (e.g. LAX→ORD then ORD→STL = two elements). A seat-assignment section that \
-        repeats the same route is NOT a separate leg.
-      - Do NOT invent a return leg. Only extract flights explicitly shown as departures \
-        in this confirmation.
-      - For all non-flight booking types, return a single-element array.
+      Return a single-element array for all booking types.
 
       Each element must follow this schema:
       {
