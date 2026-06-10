@@ -13,7 +13,6 @@ variable "app_name" {
 variable "domain_name" {
   description = "Root domain of the Route 53 hosted zone"
   type        = string
-  default     = "ankit.link"
 }
 
 variable "api_subdomain" {
