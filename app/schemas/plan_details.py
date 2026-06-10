@@ -3,7 +3,7 @@ from pydantic import AnyHttpUrl, BaseModel
 
 class ActivityDetails(BaseModel):
     location: str | None = None
-    booking_reference: str | None = None
+    confirmation: str | None = None
     notes: str | None = None
 
 

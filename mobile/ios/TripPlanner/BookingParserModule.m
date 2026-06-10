@@ -9,4 +9,9 @@ RCT_EXTERN_METHOD(parseBookingText:(NSString *)text
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(runPrompt:(NSString *)userPrompt
+                  systemPrompt:(NSString *)systemPrompt
+                  resolve:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject)
+
 @end

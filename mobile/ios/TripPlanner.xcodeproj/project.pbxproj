@@ -16,7 +16,6 @@
 		AA0000010000000000000022 /* OCRModule.m in Sources */ = {isa = PBXBuildFile; fileRef = AA0000010000000000000012 /* OCRModule.m */; };
 		AA0000010000000000000023 /* BookingParserModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000010000000000000013 /* BookingParserModule.swift */; };
 		AA0000010000000000000024 /* BookingParserModule.m in Sources */ = {isa = PBXBuildFile; fileRef = AA0000010000000000000014 /* BookingParserModule.m */; };
-		AA0000010000000000000025 /* BookingParserPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000010000000000000016 /* BookingParserPrompt.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -33,7 +32,6 @@
 		AA0000010000000000000012 /* OCRModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = OCRModule.m; path = TripPlanner/OCRModule.m; sourceTree = "<group>"; };
 		AA0000010000000000000013 /* BookingParserModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BookingParserModule.swift; path = TripPlanner/BookingParserModule.swift; sourceTree = "<group>"; };
 		AA0000010000000000000014 /* BookingParserModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = BookingParserModule.m; path = TripPlanner/BookingParserModule.m; sourceTree = "<group>"; };
-		AA0000010000000000000016 /* BookingParserPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BookingParserPrompt.swift; path = TripPlanner/BookingParserPrompt.swift; sourceTree = "<group>"; };
 		AA0000010000000000000015 /* TripPlanner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "TripPlanner-Bridging-Header.h"; path = "TripPlanner/TripPlanner-Bridging-Header.h"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
@@ -59,7 +57,6 @@
 				AA0000010000000000000012 /* OCRModule.m */,
 				AA0000010000000000000013 /* BookingParserModule.swift */,
 				AA0000010000000000000014 /* BookingParserModule.m */,
-				AA0000010000000000000016 /* BookingParserPrompt.swift */,
 				AA0000010000000000000015 /* TripPlanner-Bridging-Header.h */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
@@ -306,7 +303,6 @@
 				AA0000010000000000000021 /* OCRModule.swift in Sources */,
 				AA0000010000000000000022 /* OCRModule.m in Sources */,
 				AA0000010000000000000023 /* BookingParserModule.swift in Sources */,
-				AA0000010000000000000025 /* BookingParserPrompt.swift in Sources */,
 				AA0000010000000000000024 /* BookingParserModule.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

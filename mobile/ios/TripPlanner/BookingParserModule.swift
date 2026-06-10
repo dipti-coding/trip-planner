@@ -82,6 +82,25 @@ class BookingParserModule: NSObject {
   }
 
   @objc
+  func runPrompt(_ userPrompt: String,
+                 systemPrompt: String,
+                 resolve: @escaping RCTPromiseResolveBlock,
+                 reject: @escaping RCTPromiseRejectBlock) {
+    if #available(iOS 26.0, *) {
+      Task {
+        do {
+          let result = try await Self.runSinglePrompt(userPrompt: userPrompt, systemPrompt: systemPrompt)
+          resolve(result)
+        } catch {
+          reject("PARSE_ERROR", error.localizedDescription, error)
+        }
+      }
+    } else {
+      reject("PARSER_NOT_READY", "Apple Foundation Models requires iOS 26 or later", nil)
+    }
+  }
+
+  @objc
   func parseBookingText(_ text: String,
                         resolve: @escaping RCTPromiseResolveBlock,
                         reject: @escaping RCTPromiseRejectBlock) {
@@ -96,6 +115,29 @@ class BookingParserModule: NSObject {
       }
     } else {
       reject("PARSER_NOT_READY", "Apple Foundation Models requires iOS 26 or later", nil)
+    }
+  }
+
+  @available(iOS 26.0, *)
+  private static func runSinglePrompt(userPrompt: String, systemPrompt: String) async throws -> String {
+    switch SystemLanguageModel.default.availability {
+    case .unavailable(let reason):
+      throw NSError(
+        domain: "BookingParser", code: 2,
+        userInfo: [NSLocalizedDescriptionKey: "Apple Intelligence unavailable: \(reason)"]
+      )
+    case .available:
+      break
+    }
+    let session = LanguageModelSession(instructions: systemPrompt)
+    do {
+      let response = try await session.respond(to: userPrompt)
+      return response.content
+    } catch {
+      throw NSError(
+        domain: "BookingParser", code: 5,
+        userInfo: [NSLocalizedDescriptionKey: "Could not read the screenshot. Try a clearer booking confirmation image."]
+      )
     }
   }
 
@@ -116,12 +158,42 @@ class BookingParserModule: NSObject {
     let maxChars = 3_000
     let truncated = text.count > maxChars ? String(text.prefix(maxChars)) : text
 
-    // Use free-form generation — ask for JSON directly.
-    // This is more reliable than @Generable structured generation on-device.
-    let session = LanguageModelSession(instructions: BookingParserPrompt.system)
+    let systemPrompt = "You are a travel booking parser. Extract information from booking confirmation text and return ONLY a valid JSON array — no explanation, no markdown, just the JSON."
+    let userPrompt = """
+      Extract booking details from the text below. Return a JSON ARRAY where each element \
+      is one booking item. Omit fields that are not present — do not include null values.
+
+      For Flight bookings: return one element per leg (a change of planes = a separate leg). \
+      Do NOT invent a return leg. For all other types: return a single-element array.
+
+      Each element must use this structure:
+      {
+        "type": "<Flight|Hotel|CarReservation|Cruise|Ferry|RailwayRide|BusRide|Restaurant|Activity|Meeting>",
+        "title": "<short display name>",
+        "start_datetime": "<local datetime as shown, ISO 8601, no timezone>",
+        "end_datetime": "<local datetime as shown, ISO 8601, no timezone — omit if absent>",
+        "details": { <only the fields listed for the matched type below> }
+      }
+
+      Details fields by type:
+        Flight:         airline, flight_number, confirmation, departure_airport, arrival_airport, seat, cabin_class, terminal, gate
+        Hotel:          confirmation, room_type, loyalty_number
+        CarReservation: rental_company, confirmation, car_type, pickup_location, dropoff_location, driver_name
+        Cruise:         cruise_line, ship_name, confirmation, cabin_number, cabin_class, port_of_departure, port_of_arrival
+        Ferry:          operator, confirmation, departure_port, arrival_port, vessel_name, seat_class
+        RailwayRide:    operator, train_number, confirmation, departure_station, arrival_station, car_number, seat, cabin_class
+        BusRide:        operator, confirmation, departure_terminal, arrival_terminal, seat
+        Restaurant:     reservation_name, party_size, confirmation, dress_code
+        Activity:       location, confirmation, notes
+        Meeting:        meeting_link, organizer, attendees, notes
+
+      Text:
+      \(truncated)
+      """
+    let session = LanguageModelSession(instructions: systemPrompt)
 
     do {
-      let response = try await session.respond(to: BookingParserPrompt.user(text: truncated))
+      let response = try await session.respond(to: userPrompt)
       return try Self.parseJSONArray(response.content)
     } catch {
       // GenerationError is bridged as NSError; don't expose the raw framework message.
@@ -156,67 +228,28 @@ class BookingParserModule: NSObject {
     return [try Self.mapPlan(json)]
   }
 
-  // Map a single parsed JSON object to the dict shape that /from-parsed-bulk expects
+  // Normalize a single parsed JSON object: clean nulls from details and normalize datetimes.
   private static func mapPlan(_ json: [String: Any]) throws -> [String: Any] {
     func str(_ key: String) -> String? {
       guard let v = json[key] as? String, !v.isEmpty, v != "null" else { return nil }
       return v
     }
 
-    let pt = str("planType") ?? ""
+    let rawDetails = json["details"] as? [String: Any] ?? [:]
     var details: [String: Any] = [:]
-    func set(_ k: String, _ v: String?) { if let v { details[k] = v } }
-
-    set("confirmation", str("confirmation"))
-    set("seat",         str("seat"))
-
-    if let name = str("primaryName") {
-      switch pt {
-      case "Flight":         set("airline",         name)
-      case "Hotel":          set("hotel_name",      name)
-      case "CarReservation": set("rental_company",  name)
-      case "Cruise":         set("cruise_line",     name)
-      default:               set("venue",           name)
-      }
-    }
-    if let info = str("secondaryInfo") {
-      switch pt {
-      case "Flight":         set("flight_number",   info)
-      case "Hotel":          set("room_type",        info)
-      case "CarReservation": set("car_type",         info)
-      case "Cruise":         set("ship_name",        info)
-      case "LocalEvent":     set("event_type",       info)
-      case "RailwayRide":    set("train_number",     info)
-      default: break
-      }
-    }
-    if let o = str("origin") {
-      switch pt {
-      case "Flight":                   set("departure_airport", o)
-      case "RailwayRide":              set("departure_station", o)
-      case "Ferry", "Cruise":          set("port_of_departure", o)
-      default:                         set("pickup_location",   o)
-      }
-    }
-    if let d = str("destination") {
-      switch pt {
-      case "Flight":                   set("arrival_airport",  d)
-      case "RailwayRide":              set("arrival_station",  d)
-      case "Ferry", "Cruise":          set("port_of_arrival",  d)
-      default:                         set("dropoff_location", d)
-      }
-    }
-    if let sc = str("serviceClass") {
-      set(["Hotel", "CarReservation"].contains(pt) ? "room_type" : "cabin_class", sc)
+    for (k, v) in rawDetails {
+      if let s = v as? String, !s.isEmpty, s != "null" { details[k] = s }
+      else if let n = v as? NSNumber { details[k] = n }
+      else if let a = v as? [Any]   { details[k] = a }
     }
 
     var result: [String: Any] = [
-      "type":    pt,
-      "title":   str("title") ?? pt,
+      "type":    str("type") ?? "",
+      "title":   str("title") ?? "",
       "details": details,
     ]
-    if let s = str("startDate"), let iso = toISO(s) { result["start_datetime"] = iso }
-    if let e = str("endDate"),   let iso = toISO(e) { result["end_datetime"]   = iso }
+    if let s = str("start_datetime"), let iso = toISO(s) { result["start_datetime"] = iso }
+    if let e = str("end_datetime"),   let iso = toISO(e) { result["end_datetime"]   = iso }
     return result
   }
 

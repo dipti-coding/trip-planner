@@ -276,6 +276,36 @@ Branch: `feat/location-lookup-trip-creation` — PR #36
 
 ---
 
+## Booking Parser + Plan Type Cleanup (2026-06-08)
+
+### Backend + Mobile — Plan Type Pruning
+Branch: `feat/remove-plan-types-tour-localevent-mapdestination` — PR #42
+- [x] Removed `Tour`, `LocalEvent`, `MapDestination` from `PlanType` enum, backend schemas, and `PLAN_DETAILS_SCHEMA`
+- [x] Alembic migration (`remove_plan_types_0001`) — recreates `plantype` DB enum without the three removed values
+- [x] Removed corresponding cases from `planLines.ts` (`getPlanLines`, `getDetailRows`, `getMapsQuery`)
+- [x] Removed from `planTypes.ts` icon/color metadata and seed data
+- [x] Added `PLAN_TYPE_LABEL` mapping for human-readable button labels (Car Rental, Railway, Bus)
+- [x] Type picker last row (Cruise, Meeting) center-aligned
+
+### Mobile — BookingParserPrompt Plan Type Fix
+Branch: `fix/booking-parser-prompt-plan-types` — PR #43
+- [x] Removed `Tour` and `LocalEvent` from `planType` enum in the parser prompt
+- [x] Added `Meeting` which was a valid type but previously missing from the prompt
+
+### Mobile — Multi-Stage Booking Parser Pipeline
+Branch: `feat/booking-parser-pipeline` — PR #44
+- [x] New `runPrompt(userPrompt, systemPrompt)` Swift method — generic thin wrapper around `LanguageModelSession`; returns raw response string for JS to consume
+- [x] `BookingParserPrompt.swift` deleted — all prompts moved to TypeScript
+- [x] `mobile/utils/bookingPipeline.ts` — JS-orchestrated pipeline replacing single mega-prompt:
+  - Stage 1 (all types): `detectPlanType` — 1 focused LLM call
+  - Flight (2 stages): leg structure (airports + times) → shared booking details
+  - Hotel (2 stages): check-in/check-out dates → remaining details
+  - CarReservation (2 stages): pickup/dropoff locations + dates → booking details
+  - Generic fallback: delegates to original Swift `parseBookingText` (preserves `toISO` date normalization)
+- [x] `TripDetailScreen.tsx` updated to call `parseBooking(text, tripYear)` from the new pipeline
+
+---
+
 ## Week 3 — Weather + PDF Export
 _Not started_
 
