@@ -1,5 +1,5 @@
 export const PLAN_DETAIL_VALID_KEYS: Record<string, Set<string>> = {
-  Activity:        new Set(['location', 'booking_reference', 'notes']),
+  Activity:        new Set(['location', 'confirmation', 'notes']),
   Restaurant:      new Set(['reservation_name', 'party_size', 'confirmation', 'dress_code']),
   Meeting:         new Set(['meeting_link', 'organizer', 'attendees', 'notes']),
   Flight:          new Set(['airline', 'flight_number', 'seat', 'confirmation', 'departure_airport', 'arrival_airport', 'terminal', 'gate', 'cabin_class']),
@@ -15,7 +15,6 @@ export const PLAN_DETAIL_VALID_KEYS: Record<string, Set<string>> = {
 // Add entries here when a new type uses a different key for a semantically equivalent field.
 export const PLAN_DETAIL_KEY_ALIASES: Record<string, Record<string, string>> = {
   Activity: {
-    venue:        'location',
-    confirmation: 'booking_reference',
+    venue: 'location',
   },
 };

@@ -140,7 +140,7 @@ export function getDetailRows(plan: Plan): DetailRow[] {
 
     case 'Activity':
       add('map-pin', 'Location', d.location);
-      add('check', 'Booking ref.', d.booking_reference, true);
+      add('check', 'Confirmation', d.confirmation, true);
       add('doc', 'Notes', d.notes);
       break;
 
