@@ -1,16 +1,18 @@
 import type {ParsedPlan} from '../shared';
+import {stripDayOfWeek} from '../shared';
 import {extractFlightLegs} from './extractLegs';
 import {extractFlightDetails} from './extractDetails';
 
 export async function parseFlightBooking(text: string, tripYear: string): Promise<ParsedPlan[]> {
-  const legs = await extractFlightLegs(text, tripYear);
+  const sanitized = stripDayOfWeek(text);
+  const legs = await extractFlightLegs(sanitized, tripYear);
   console.log('[Flight] stage1 extractLegs →', JSON.stringify(legs));
   if (legs.length === 0) return [];
 
   console.log('[Flight] stage2 extractDetails context: legs =', JSON.stringify(legs));
   let detailsPerLeg: Awaited<ReturnType<typeof extractFlightDetails>> = [];
   try {
-    detailsPerLeg = await extractFlightDetails(text, legs);
+    detailsPerLeg = await extractFlightDetails(sanitized, legs);
     console.log('[Flight] stage2 extractDetails →', JSON.stringify(detailsPerLeg));
   } catch (err) {
     console.log('[Flight] stage2 extractDetails failed after retries, using legs only:', (err as any)?.message);

@@ -17,6 +17,12 @@ export function truncate(text: string): string {
   return text.length > MAX_OCR_CHARS ? text.slice(0, MAX_OCR_CHARS) : text;
 }
 
+// Remove day-of-week prefixes (e.g. "Sat, Aug 31" → "Aug 31") so the model
+// cannot reconcile them against the year and shift the day-of-month.
+export function stripDayOfWeek(text: string): string {
+  return text.replace(/\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),\s*/gi, '');
+}
+
 export function extractJSON(raw: string): any {
   const arrS = raw.indexOf('['), arrE = raw.lastIndexOf(']');
   if (arrS !== -1 && arrE !== -1) {
