@@ -177,15 +177,15 @@ class BookingParserModule: NSObject {
 
       Details fields by type:
         Flight:         airline, flight_number, confirmation, departure_airport, arrival_airport, seat, cabin_class, terminal, gate
-        Hotel:          confirmation, room_type, loyalty_number
+        Hotel:          location, confirmation, room_type, loyalty_number
         CarReservation: rental_company, confirmation, car_type, pickup_location, dropoff_location, driver_name
         Cruise:         cruise_line, ship_name, confirmation, cabin_number, cabin_class, port_of_departure, port_of_arrival
         Ferry:          operator, confirmation, departure_port, arrival_port, vessel_name, seat_class
         RailwayRide:    operator, train_number, confirmation, departure_station, arrival_station, car_number, seat, cabin_class
         BusRide:        operator, confirmation, departure_terminal, arrival_terminal, seat
-        Restaurant:     reservation_name, party_size, confirmation, dress_code
+        Restaurant:     location, reservation_name, party_size, confirmation, dress_code
         Activity:       location, confirmation, notes
-        Meeting:        meeting_link, organizer, attendees, notes
+        Meeting:        location, meeting_link, organizer, attendees, notes
 
       Text:
       \(truncated)

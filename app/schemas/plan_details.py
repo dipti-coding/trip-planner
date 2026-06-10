@@ -8,6 +8,7 @@ class ActivityDetails(BaseModel):
 
 
 class RestaurantDetails(BaseModel):
+    location: str | None = None
     reservation_name: str | None = None
     party_size: int | None = None
     confirmation: str | None = None
@@ -15,6 +16,7 @@ class RestaurantDetails(BaseModel):
 
 
 class MeetingDetails(BaseModel):
+    location: str | None = None
     meeting_link: AnyHttpUrl | None = None
     organizer: str | None = None
     attendees: list[str] = []
@@ -34,6 +36,7 @@ class FlightDetails(BaseModel):
 
 
 class HotelDetails(BaseModel):
+    location: str | None = None
     confirmation: str | None = None
     room_type: str | None = None
     loyalty_number: str | None = None

@@ -126,12 +126,14 @@ export function getDetailRows(plan: Plan): DetailRow[] {
       break;
 
     case 'Hotel':
+      add('map-pin', 'Location', d.location);
       add('hotel', 'Room', d.room_type);
       add('star', 'Loyalty #', d.loyalty_number, true);
       add('check', 'Confirmation', d.confirmation, true);
       break;
 
     case 'Restaurant':
+      add('map-pin', 'Location', d.location);
       add('user', 'Reservation', d.reservation_name);
       if (d.party_size) add('user', 'Party', `${d.party_size} people`);
       add('star', 'Dress code', d.dress_code);
@@ -192,6 +194,7 @@ export function getDetailRows(plan: Plan): DetailRow[] {
       break;
 
     case 'Meeting':
+      add('map-pin', 'Location', d.location);
       add('user', 'Organizer', d.organizer);
       if (Array.isArray(d.attendees) && d.attendees.length)
         add('user', 'Attendees', d.attendees.join(', '));
