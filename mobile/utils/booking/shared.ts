@@ -1,4 +1,5 @@
 import {NativeModules} from 'react-native';
+import {PLAN_DETAIL_VALID_KEYS, PLAN_DETAIL_KEY_ALIASES} from './detailSchema';
 
 const {BookingParserModule} = NativeModules;
 
@@ -51,4 +52,14 @@ export async function runPrompt(systemPrompt: string, userPrompt: string, retrie
 export async function runGenericParser(textWithContext: string): Promise<any[]> {
   const result = await BookingParserModule.parseBookingText(textWithContext);
   return Array.isArray(result) ? result : [];
+}
+
+export function filterDetailsForType(details: Record<string, any>, type: string): Record<string, any> {
+  const validKeys = PLAN_DETAIL_VALID_KEYS[type];
+  if (!validKeys) return {};
+  const aliases = PLAN_DETAIL_KEY_ALIASES[type] ?? {};
+  const remapped = Object.fromEntries(
+    Object.entries(details).map(([k, v]) => [aliases[k] ?? k, v]),
+  );
+  return Object.fromEntries(Object.entries(remapped).filter(([k]) => validKeys.has(k)));
 }

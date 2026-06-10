@@ -1,4 +1,4 @@
-import {runPrompt, truncate, extractJSON} from './shared';
+import {runPrompt, truncate, extractJSON, filterDetailsForType} from './shared';
 import type {ParsedPlan} from './shared';
 import {parseFlightBooking} from './flight/parser';
 import {parseHotelBooking} from './hotel/parser';
@@ -20,10 +20,12 @@ export async function parseBooking(ocrText: string, tripYear: string): Promise<P
   const type = await detectPlanType(ocrText);
   console.log('[BookingPipeline] detected type:', type);
 
+  let plans: ParsedPlan[];
   switch (type) {
-    case 'Flight':         return parseFlightBooking(ocrText, tripYear);
-    case 'Hotel':          return parseHotelBooking(ocrText, tripYear);
-    case 'CarReservation': return parseCarBooking(ocrText, tripYear);
-    default:               return parseGenericBooking(ocrText, tripYear, type);
+    case 'Flight':         plans = await parseFlightBooking(ocrText, tripYear); break;
+    case 'Hotel':          plans = await parseHotelBooking(ocrText, tripYear); break;
+    case 'CarReservation': plans = await parseCarBooking(ocrText, tripYear); break;
+    default:               plans = await parseGenericBooking(ocrText, tripYear, type); break;
   }
+  return plans.map(p => ({...p, details: filterDetailsForType(p.details ?? {}, p.type)}));
 }
