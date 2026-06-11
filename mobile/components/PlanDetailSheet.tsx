@@ -21,9 +21,10 @@ type Props = {
   plan: Plan | null;
   onClose: () => void;
   onDelete: (id: string) => void;
+  onEdit: (plan: Plan) => void;
 };
 
-export default function PlanDetailSheet({plan, onClose, onDelete}: Props) {
+export default function PlanDetailSheet({plan, onClose, onDelete, onEdit}: Props) {
   const {theme, colors, glass, primary, typeMeta, defaultMeta} = useTheme();
 
   const styles = useMemo(() => StyleSheet.create({
@@ -201,7 +202,7 @@ export default function PlanDetailSheet({plan, onClose, onDelete}: Props) {
             </View>
 
             <View style={styles.bottomActions}>
-              <TouchableOpacity style={styles.bottomBtn} activeOpacity={0.7}>
+              <TouchableOpacity style={styles.bottomBtn} onPress={() => { onEdit(plan); onClose(); }} activeOpacity={0.7}>
                 <Icon name="edit" size={16} color={colors.textPrimary}/>
                 <Text style={styles.bottomBtnText}>Edit</Text>
               </TouchableOpacity>

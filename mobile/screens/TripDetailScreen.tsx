@@ -419,6 +419,179 @@ function AddPlanOverlay({tripId, trip, defaultDate, onClose, onAdded}: {
   );
 }
 
+// ─── Edit Plan overlay ───────────────────────────────────────────────────────
+
+type FieldDef = {key: string; label: string; numeric?: boolean};
+
+const DETAIL_FIELDS: Record<string, FieldDef[]> = {
+  Flight:         [{key:'airline',label:'Airline'},{key:'flight_number',label:'Flight number'},{key:'departure_airport',label:'From'},{key:'arrival_airport',label:'To'},{key:'seat',label:'Seat'},{key:'cabin_class',label:'Cabin class'},{key:'terminal',label:'Terminal'},{key:'gate',label:'Gate'},{key:'confirmation',label:'Confirmation'}],
+  Hotel:          [{key:'room_type',label:'Room type'},{key:'location',label:'Address'},{key:'confirmation',label:'Confirmation'},{key:'loyalty_number',label:'Loyalty number'}],
+  Activity:       [{key:'location',label:'Location'},{key:'confirmation',label:'Confirmation'},{key:'notes',label:'Notes'}],
+  Restaurant:     [{key:'reservation_name',label:'Reservation name'},{key:'party_size',label:'Party size',numeric:true},{key:'location',label:'Address'},{key:'confirmation',label:'Confirmation'},{key:'dress_code',label:'Dress code'}],
+  Meeting:        [{key:'organizer',label:'Organizer'},{key:'location',label:'Location'},{key:'meeting_link',label:'Meeting link'},{key:'notes',label:'Notes'}],
+  CarReservation: [{key:'rental_company',label:'Rental company'},{key:'car_type',label:'Car type'},{key:'pickup_location',label:'Pickup location'},{key:'dropoff_location',label:'Dropoff location'},{key:'driver_name',label:'Driver name'},{key:'confirmation',label:'Confirmation'}],
+  Cruise:         [{key:'cruise_line',label:'Cruise line'},{key:'ship_name',label:'Ship name'},{key:'cabin_number',label:'Cabin number'},{key:'cabin_class',label:'Cabin class'},{key:'port_of_departure',label:'From'},{key:'port_of_arrival',label:'To'},{key:'confirmation',label:'Confirmation'}],
+  Ferry:          [{key:'operator',label:'Operator'},{key:'vessel_name',label:'Vessel name'},{key:'departure_port',label:'From'},{key:'arrival_port',label:'To'},{key:'seat_class',label:'Seat class'},{key:'confirmation',label:'Confirmation'}],
+  RailwayRide:    [{key:'operator',label:'Operator'},{key:'train_number',label:'Train number'},{key:'departure_station',label:'From'},{key:'arrival_station',label:'To'},{key:'car_number',label:'Car'},{key:'seat',label:'Seat'},{key:'cabin_class',label:'Cabin class'},{key:'confirmation',label:'Confirmation'}],
+  BusRide:        [{key:'operator',label:'Operator'},{key:'departure_terminal',label:'From'},{key:'arrival_terminal',label:'To'},{key:'seat',label:'Seat'},{key:'confirmation',label:'Confirmation'}],
+};
+
+function EditPlanOverlay({plan, trip, onClose, onSaved}: {
+  plan: Plan; trip: Trip; onClose: () => void; onSaved: (p: Plan) => void;
+}) {
+  const {theme, colors} = useTheme();
+  const insets = useSafeAreaInsets();
+
+  const [title, setTitle]         = useState(plan.title);
+  const [startDate, setStartDate] = useState<Date | null>(() => plan.start_datetime ? new Date(plan.start_datetime) : null);
+  const [endDate, setEndDate]     = useState<Date | null>(() => plan.end_datetime ? new Date(plan.end_datetime) : null);
+  const [showStart, setShowStart] = useState(false);
+  const [showEnd, setShowEnd]     = useState(false);
+  const [saving, setSaving]       = useState(false);
+
+  const fields = DETAIL_FIELDS[plan.type] ?? [];
+  const [detailValues, setDetailValues] = useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {};
+    for (const f of fields) {
+      const v = (plan.details as Record<string, any>)[f.key];
+      init[f.key] = v != null ? String(v) : '';
+    }
+    return init;
+  });
+
+  const tripMin = new Date(trip.start_date + 'T00:00:00');
+  const tripMax = new Date(trip.end_date + 'T23:59:59');
+  const canSave = title.trim().length > 0;
+
+  function fmtDatetime(d: Date) {
+    return d.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'})
+      + '  ·  '
+      + d.toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit'});
+  }
+
+  async function handleSave() {
+    if (!canSave) return;
+    setSaving(true);
+    const details: Record<string, string | number> = {};
+    for (const f of fields) {
+      const v = detailValues[f.key].trim();
+      if (v) details[f.key] = f.numeric ? Number(v) : v;
+    }
+    try {
+      const res = await client.patch<Plan>(`/plans/${plan.id}`, {
+        title: title.trim(),
+        start_datetime: startDate ? toLocalISO(startDate) : null,
+        end_datetime: endDate ? toLocalISO(endDate) : null,
+        details,
+      });
+      onSaved(res.data);
+      onClose();
+    } catch { Alert.alert('Error', 'Could not save changes. Please try again.'); }
+    finally { setSaving(false); }
+  }
+
+  const s = useMemo(() => StyleSheet.create({
+    overlay:         {position: 'absolute', inset: 0, backgroundColor: colors.bgBase, zIndex: 10},
+    navBar:          {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.xl, paddingVertical: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, backgroundColor: colors.surface},
+    navBtn:          {minWidth: 64, alignItems: 'flex-end'},
+    navCancelText:   {fontSize: typography.base, fontWeight: typography.medium, color: colors.accent},
+    navSaveText:     {fontSize: typography.base, fontWeight: typography.semibold, color: colors.accent},
+    navSaveDisabled: {color: colors.textTertiary},
+    navTitle:        {fontSize: typography.base, fontWeight: typography.semibold, color: colors.textPrimary},
+    content:         {padding: spacing.xl},
+    sectionLabel:    {fontSize: typography.xs + 1, fontWeight: typography.medium, letterSpacing: 0.32, textTransform: 'uppercase', color: colors.textTertiary, marginBottom: spacing.md, marginTop: spacing.xl},
+    fieldLabel:      {fontSize: typography.bodySmall, color: colors.textSecondary, marginBottom: spacing.sm},
+    input:           {borderWidth: 1, borderColor: colors.border, borderRadius: radii.xl, padding: spacing.lg, fontSize: typography.base, color: colors.textPrimary, backgroundColor: colors.bgBase, marginBottom: spacing.md},
+    dateRow:         {flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radii.xl, paddingHorizontal: spacing.lg, paddingVertical: 13, backgroundColor: colors.bgBase, marginBottom: spacing.md},
+    dateText:        {flex: 1, fontSize: typography.base, color: colors.textPrimary},
+    datePlaceholder: {flex: 1, fontSize: typography.base, color: colors.textTertiary},
+  }), [theme]);
+
+  return (
+    <View style={s.overlay}>
+      <View style={[s.navBar, {paddingTop: insets.top + spacing.sm}]}>
+        <TouchableOpacity onPress={onClose} style={{minWidth: 64}}>
+          <Text style={s.navCancelText}>Cancel</Text>
+        </TouchableOpacity>
+        <Text style={s.navTitle}>Edit {plan.type}</Text>
+        <TouchableOpacity style={s.navBtn} onPress={handleSave} disabled={!canSave}>
+          {saving
+            ? <ActivityIndicator size="small" color={colors.accent}/>
+            : <Text style={[s.navSaveText, !canSave && s.navSaveDisabled]}>Save</Text>}
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView keyboardShouldPersistTaps="handled">
+        <View style={s.content}>
+          <Text style={s.sectionLabel}>TITLE</Text>
+          <TextInput style={s.input} value={title} onChangeText={setTitle} placeholder="Plan name" placeholderTextColor={colors.textTertiary} autoFocus/>
+
+          <Text style={s.sectionLabel}>DATE & TIME</Text>
+          <TouchableOpacity style={s.dateRow} onPress={() => { setShowStart(v => !v); setShowEnd(false); }} activeOpacity={0.7}>
+            <Icon name="calendar" size={17} color={colors.textPrimary}/>
+            {startDate
+              ? <Text style={s.dateText}>Start · {fmtDatetime(startDate)}</Text>
+              : <Text style={s.datePlaceholder}>Start · Not set</Text>}
+            <Icon name="chev-down" size={17} color={colors.textTertiary}/>
+          </TouchableOpacity>
+          {showStart && (
+            <DateTimePicker
+              value={startDate ?? tripMin}
+              mode="datetime"
+              display={Platform.OS === 'ios' ? 'inline' : 'default'}
+              minimumDate={tripMin}
+              maximumDate={tripMax}
+              onChange={(_e, d) => {
+                if (d) { setStartDate(d); if (endDate && d > endDate) setEndDate(d); }
+                if (Platform.OS === 'android') setShowStart(false);
+              }}
+            />
+          )}
+          <TouchableOpacity style={s.dateRow} onPress={() => { setShowEnd(v => !v); setShowStart(false); }} activeOpacity={0.7}>
+            <Icon name="calendar" size={17} color={colors.textPrimary}/>
+            {endDate
+              ? <Text style={s.dateText}>End · {fmtDatetime(endDate)}</Text>
+              : <Text style={s.datePlaceholder}>End · Not set</Text>}
+            <Icon name="chev-down" size={17} color={colors.textTertiary}/>
+          </TouchableOpacity>
+          {showEnd && (
+            <DateTimePicker
+              value={endDate ?? (startDate ?? tripMin)}
+              mode="datetime"
+              display={Platform.OS === 'ios' ? 'inline' : 'default'}
+              minimumDate={startDate ?? tripMin}
+              maximumDate={tripMax}
+              onChange={(_e, d) => {
+                if (d) setEndDate(d);
+                if (Platform.OS === 'android') setShowEnd(false);
+              }}
+            />
+          )}
+
+          {fields.length > 0 && (
+            <>
+              <Text style={s.sectionLabel}>DETAILS</Text>
+              {fields.map(f => (
+                <React.Fragment key={f.key}>
+                  {detailValues[f.key].trim() ? <Text style={s.fieldLabel}>{f.label}</Text> : null}
+                  <TextInput
+                    style={s.input}
+                    value={detailValues[f.key]}
+                    onChangeText={v => setDetailValues(prev => ({...prev, [f.key]: v}))}
+                    placeholder={f.label}
+                    placeholderTextColor={colors.textTertiary}
+                    keyboardType={f.numeric ? 'numeric' : 'default'}
+                  />
+                </React.Fragment>
+              ))}
+            </>
+          )}
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
 // ─── Edit Trip overlay ───────────────────────────────────────────────────────
 
 function EditTripSheet({trip, onClose, onSaved}: {
@@ -550,6 +723,7 @@ export default function TripDetailScreen({navigation, route}: Props) {
   const [viewMode, setViewMode]   = useState<ViewMode>('plans');
   const [addingPlan, setAddingPlan] = useState(false);
   const [editingTrip, setEditingTrip] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const stripRef = useRef<ScrollView>(null);
 
@@ -741,7 +915,17 @@ export default function TripDetailScreen({navigation, route}: Props) {
         plan={selectedPlan}
         onClose={() => setSelectedPlan(null)}
         onDelete={planId => { handleDeletePlan(planId); setSelectedPlan(null); }}
+        onEdit={plan => { setSelectedPlan(null); setEditingPlan(plan); }}
       />
+
+      {editingPlan && trip && (
+        <EditPlanOverlay
+          plan={editingPlan}
+          trip={trip}
+          onClose={() => setEditingPlan(null)}
+          onSaved={updated => { setPlans(prev => prev.map(p => p.id === updated.id ? updated : p)); setEditingPlan(null); }}
+        />
+      )}
     </View>
   );
 }
