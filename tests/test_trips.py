@@ -63,3 +63,20 @@ def test_delete_trip_cascades_plans(client, user):
 def test_delete_trip_not_found(client):
     resp = client.delete("/trips/00000000-0000-0000-0000-000000000000")
     assert resp.status_code == 404
+
+
+def test_update_trip(client, user):
+    trip = _make_trip(client, user).json()
+    trip_id = trip["id"]
+
+    resp = client.patch(f"/trips/{trip_id}", json={"name": "Paris Autumn", "end_date": "2026-04-15"})
+    data = resp.json()
+    assert resp.status_code == 200
+    assert data["name"] == "Paris Autumn"
+    assert data["end_date"] == "2026-04-15"
+    assert data["destination_city"] == "Paris, France"  # unchanged
+
+
+def test_update_trip_not_found(client):
+    resp = client.patch("/trips/00000000-0000-0000-0000-000000000000", json={"name": "Ghost"})
+    assert resp.status_code == 404

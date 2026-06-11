@@ -12,6 +12,13 @@ class TripCreate(BaseModel):
     end_date: date
 
 
+class TripUpdate(BaseModel):
+    name: str | None = None
+    destination_city: str | None = None
+    start_date: date | None = None
+    end_date: date | None = None
+
+
 class TripResponse(BaseModel):
     id: UUID
     user_id: UUID

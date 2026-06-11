@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.db import get_db
 from app.models import Plan, Trip
-from app.schemas.trip import TripCreate, TripResponse
+from app.schemas.trip import TripCreate, TripResponse, TripUpdate
 
 router = APIRouter(prefix="/trips", tags=["trips"])
 
@@ -90,6 +90,19 @@ def get_trip(trip_id: UUID, db: Session = Depends(get_db), _: str = Depends(get_
     trip = db.query(Trip).filter(Trip.id == trip_id).first()
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
+    plans = db.query(Plan).filter(Plan.trip_id == trip_id).all()
+    return _build_response(trip, plans)
+
+
+@router.patch("/{trip_id}", response_model=TripResponse)
+def update_trip(trip_id: UUID, body: TripUpdate, db: Session = Depends(get_db), _: str = Depends(get_current_user)):
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(trip, field, value)
+    db.commit()
+    db.refresh(trip)
     plans = db.query(Plan).filter(Plan.trip_id == trip_id).all()
     return _build_response(trip, plans)
 
