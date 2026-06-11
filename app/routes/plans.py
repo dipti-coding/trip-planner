@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.db import get_db
 from app.models import Plan, Trip
-from app.schemas.plan import PLAN_DETAILS_SCHEMA, PlanCreate, PlanResponse
+from app.schemas.plan import PLAN_DETAILS_SCHEMA, PlanCreate, PlanResponse, PlanUpdate
 
 router = APIRouter(tags=["plans"])
 
@@ -144,6 +144,26 @@ def get_plan(plan_id: UUID, db: Session = Depends(get_db), _: str = Depends(get_
     plan = db.query(Plan).filter(Plan.id == plan_id).first()
     if not plan:
         raise HTTPException(status_code=404, detail="Plan not found")
+    return plan
+
+
+@router.patch("/plans/{plan_id}", response_model=PlanResponse)
+def update_plan(plan_id: UUID, body: PlanUpdate, db: Session = Depends(get_db), _: str = Depends(get_current_user)):
+    plan = db.query(Plan).filter(Plan.id == plan_id).first()
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    updates = body.model_dump(exclude_unset=True)
+    if "details" in updates:
+        merged = {**plan.details, **updates.pop("details")}
+        details_schema = PLAN_DETAILS_SCHEMA[plan.type]
+        try:
+            plan.details = details_schema(**merged).model_dump(exclude_none=True)
+        except ValidationError as e:
+            raise HTTPException(status_code=422, detail=e.errors())
+    for field, value in updates.items():
+        setattr(plan, field, value)
+    db.commit()
+    db.refresh(plan)
     return plan
 
 

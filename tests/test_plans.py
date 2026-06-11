@@ -230,6 +230,49 @@ def test_get_plan_not_found(client):
     assert resp.status_code == 404
 
 
+def test_update_plan_title_and_datetime(client, user):
+    trip = _make_trip(client, user)
+    plan = _make_flight_plan(client, trip["id"])
+
+    resp = client.patch(f"/plans/{plan['id']}", json={
+        "title": "SFO → HND",
+        "start_datetime": "2026-06-02T10:00:00Z",
+    })
+    data = resp.json()
+    assert resp.status_code == 200
+    assert data["title"] == "SFO → HND"
+    assert "2026-06-02" in data["start_datetime"]
+    assert data["details"]["flight_number"] == "UA 837"  # unchanged
+
+
+def test_update_plan_details_partial(client, user):
+    trip = _make_trip(client, user)
+    plan = _make_flight_plan(client, trip["id"])
+
+    resp = client.patch(f"/plans/{plan['id']}", json={
+        "details": {"seat": "12A", "gate": "B22"},
+    })
+    data = resp.json()
+    assert resp.status_code == 200
+    assert data["details"]["seat"] == "12A"
+    assert data["details"]["gate"] == "B22"
+    assert data["details"]["airline"] == "United"       # existing field preserved
+    assert data["details"]["flight_number"] == "UA 837" # existing field preserved
+
+
+def test_update_plan_details_invalid(client, user):
+    trip = _make_trip(client, user)
+    plan = _make_hotel_plan(client, trip["id"])
+
+    resp = client.patch(f"/plans/{plan['id']}", json={"details": "bad"})
+    assert resp.status_code == 422
+
+
+def test_update_plan_not_found(client):
+    resp = client.patch(f"/plans/{uuid.uuid4()}", json={"title": "Ghost"})
+    assert resp.status_code == 404
+
+
 # ---------- Private common helper functions
 def _make_trip(client, user):
     return client.post("/trips", json={
