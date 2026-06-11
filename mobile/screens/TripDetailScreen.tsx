@@ -419,6 +419,122 @@ function AddPlanOverlay({tripId, trip, defaultDate, onClose, onAdded}: {
   );
 }
 
+// ─── Edit Trip overlay ───────────────────────────────────────────────────────
+
+function EditTripSheet({trip, onClose, onSaved}: {
+  trip: Trip; onClose: () => void; onSaved: (t: Trip) => void;
+}) {
+  const {theme, colors} = useTheme();
+  const insets = useSafeAreaInsets();
+  const [name, setName]           = useState(trip.name);
+  const [city, setCity]           = useState(trip.destination_city);
+  const [startDate, setStartDate] = useState(() => new Date(trip.start_date + 'T12:00:00'));
+  const [endDate, setEndDate]     = useState(() => new Date(trip.end_date + 'T12:00:00'));
+  const [showStart, setShowStart] = useState(false);
+  const [showEnd, setShowEnd]     = useState(false);
+  const [saving, setSaving]       = useState(false);
+
+  const canSave = name.trim().length > 0 && city.trim().length > 0;
+
+  function toDateStr(d: Date) {
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  }
+
+  function fmtDate(d: Date) {
+    return d.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
+  }
+
+  async function handleSave() {
+    if (!canSave) return;
+    setSaving(true);
+    try {
+      const res = await client.patch<Trip>(`/trips/${trip.id}`, {
+        name: name.trim(),
+        destination_city: city.trim(),
+        start_date: toDateStr(startDate),
+        end_date: toDateStr(endDate),
+      });
+      onSaved(res.data);
+      onClose();
+    } catch { Alert.alert('Error', 'Could not save changes. Please try again.'); }
+    finally { setSaving(false); }
+  }
+
+  const s = useMemo(() => StyleSheet.create({
+    overlay:        {position: 'absolute', inset: 0, backgroundColor: colors.bgBase, zIndex: 10},
+    navBar:         {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.xl, paddingVertical: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, backgroundColor: colors.surface},
+    navBtn:         {minWidth: 64, alignItems: 'flex-end'},
+    navCancelText:  {fontSize: typography.base, fontWeight: typography.medium, color: colors.accent},
+    navSaveText:    {fontSize: typography.base, fontWeight: typography.semibold, color: colors.accent},
+    navSaveDisabled:{color: colors.textTertiary},
+    navTitle:       {fontSize: typography.base, fontWeight: typography.semibold, color: colors.textPrimary},
+    content:        {padding: spacing.xl},
+    fieldLabel:     {fontSize: typography.bodySmall, color: colors.textSecondary, marginBottom: spacing.sm},
+    input:          {borderWidth: 1, borderColor: colors.border, borderRadius: radii.xl, padding: spacing.lg, fontSize: typography.base, color: colors.textPrimary, backgroundColor: colors.bgBase, marginBottom: spacing.xl},
+    dateRow:        {flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radii.xl, paddingHorizontal: spacing.lg, paddingVertical: 13, backgroundColor: colors.bgBase, marginBottom: spacing.md},
+    dateText:       {flex: 1, fontSize: typography.base, color: colors.textPrimary},
+  }), [theme]);
+
+  return (
+    <View style={s.overlay}>
+      <View style={[s.navBar, {paddingTop: insets.top + spacing.sm}]}>
+        <TouchableOpacity onPress={onClose} style={{minWidth: 64}}>
+          <Text style={s.navCancelText}>Cancel</Text>
+        </TouchableOpacity>
+        <Text style={s.navTitle}>Edit trip</Text>
+        <TouchableOpacity style={s.navBtn} onPress={handleSave} disabled={!canSave}>
+          {saving
+            ? <ActivityIndicator size="small" color={colors.accent}/>
+            : <Text style={[s.navSaveText, !canSave && s.navSaveDisabled]}>Save</Text>}
+        </TouchableOpacity>
+      </View>
+      <ScrollView keyboardShouldPersistTaps="handled">
+        <View style={s.content}>
+          <Text style={s.fieldLabel}>TRIP NAME</Text>
+          <TextInput style={s.input} value={name} onChangeText={setName} placeholder="Trip name" placeholderTextColor={colors.textTertiary} autoFocus/>
+          <Text style={s.fieldLabel}>DESTINATION</Text>
+          <TextInput style={s.input} value={city} onChangeText={setCity} placeholder="City" placeholderTextColor={colors.textTertiary}/>
+          <Text style={s.fieldLabel}>DATES</Text>
+          <TouchableOpacity style={s.dateRow} onPress={() => { setShowStart(v => !v); setShowEnd(false); }} activeOpacity={0.7}>
+            <Icon name="calendar" size={17} color={colors.textPrimary}/>
+            <Text style={s.dateText}>Start · {fmtDate(startDate)}</Text>
+            <Icon name="chev-down" size={17} color={colors.textTertiary}/>
+          </TouchableOpacity>
+          {showStart && (
+            <DateTimePicker
+              value={startDate}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'inline' : 'default'}
+              onChange={(_e, d) => {
+                if (d) { setStartDate(d); if (d > endDate) setEndDate(d); }
+                if (Platform.OS === 'android') setShowStart(false);
+              }}
+            />
+          )}
+          <TouchableOpacity style={s.dateRow} onPress={() => { setShowEnd(v => !v); setShowStart(false); }} activeOpacity={0.7}>
+            <Icon name="calendar" size={17} color={colors.textPrimary}/>
+            <Text style={s.dateText}>End · {fmtDate(endDate)}</Text>
+            <Icon name="chev-down" size={17} color={colors.textTertiary}/>
+          </TouchableOpacity>
+          {showEnd && (
+            <DateTimePicker
+              value={endDate}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'inline' : 'default'}
+              minimumDate={startDate}
+              onChange={(_e, d) => {
+                if (d) setEndDate(d);
+                if (Platform.OS === 'android') setShowEnd(false);
+              }}
+            />
+          )}
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 
 export default function TripDetailScreen({navigation, route}: Props) {
@@ -433,6 +549,7 @@ export default function TripDetailScreen({navigation, route}: Props) {
   const [scrolled, setScrolled]   = useState(false);
   const [viewMode, setViewMode]   = useState<ViewMode>('plans');
   const [addingPlan, setAddingPlan] = useState(false);
+  const [editingTrip, setEditingTrip] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const stripRef = useRef<ScrollView>(null);
 
@@ -542,7 +659,11 @@ export default function TripDetailScreen({navigation, route}: Props) {
                   <Text style={s.glassBtnWideText}>PDF</Text>
                 </View>
               </TouchableOpacity>
-              <TouchableOpacity style={s.glassBtn} onPress={handleDeleteTrip}>
+              <TouchableOpacity style={s.glassBtn} onPress={() => Alert.alert('', '', [
+                {text: 'Edit Trip Details', onPress: () => setEditingTrip(true)},
+                {text: 'Delete Trip', style: 'destructive', onPress: handleDeleteTrip},
+                {text: 'Cancel', style: 'cancel'},
+              ])}>
                 <Icon name="more" size={18} color={glass.textPrimary}/>
               </TouchableOpacity>
             </View>
@@ -605,6 +726,14 @@ export default function TripDetailScreen({navigation, route}: Props) {
           tripId={tripId} trip={trip} defaultDate={activeDate}
           onClose={() => setAddingPlan(false)}
           onAdded={updatedPlans => { setPlans(updatedPlans); setAddingPlan(false); }}
+        />
+      )}
+
+      {editingTrip && (
+        <EditTripSheet
+          trip={trip}
+          onClose={() => setEditingTrip(false)}
+          onSaved={updated => { setTrip(updated); setEditingTrip(false); }}
         />
       )}
 
