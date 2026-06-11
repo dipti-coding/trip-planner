@@ -463,6 +463,11 @@ function EditPlanOverlay({plan, trip, onClose, onSaved}: {
   const tripMax = new Date(trip.end_date + 'T23:59:59');
   const canSave = title.trim().length > 0;
 
+  // Track originals so we only send datetimes that the user actually changed,
+  // avoiding a timezone round-trip that would silently shift the stored time.
+  const origStart = plan.start_datetime;
+  const origEnd   = plan.end_datetime;
+
   function fmtDatetime(d: Date) {
     return d.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'})
       + '  ·  '
@@ -477,13 +482,13 @@ function EditPlanOverlay({plan, trip, onClose, onSaved}: {
       const v = detailValues[f.key].trim();
       if (v) details[f.key] = f.numeric ? Number(v) : v;
     }
+    const body: Record<string, unknown> = {title: title.trim(), details};
+    if (startDate && toLocalISO(startDate) !== (origStart ? toLocalISO(new Date(origStart)) : null))
+      body.start_datetime = toLocalISO(startDate);
+    if (endDate && toLocalISO(endDate) !== (origEnd ? toLocalISO(new Date(origEnd)) : null))
+      body.end_datetime = toLocalISO(endDate);
     try {
-      const res = await client.patch<Plan>(`/plans/${plan.id}`, {
-        title: title.trim(),
-        start_datetime: startDate ? toLocalISO(startDate) : null,
-        end_datetime: endDate ? toLocalISO(endDate) : null,
-        details,
-      });
+      const res = await client.patch<Plan>(`/plans/${plan.id}`, body);
       onSaved(res.data);
       onClose();
     } catch { Alert.alert('Error', 'Could not save changes. Please try again.'); }
