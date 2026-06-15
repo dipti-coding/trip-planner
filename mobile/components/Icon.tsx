@@ -110,6 +110,12 @@ export default function Icon({name, size = 20, stroke = 1.6, color = colors.text
       return <Svg {...dim}>{p('M5 12h14M13 6l6 6-6 6')}</Svg>;
     case 'arrow-up-right':
       return <Svg {...dim}>{p('M7 17L17 7M8 7h9v9')}</Svg>;
+    case 'zap':
+      return <Svg {...dim}>{p('M13 2L4 14h7v8l9-12h-7z')}</Svg>;
+    case 'thermometer':
+      return <Svg {...dim}>{p('M12 9V3M9 9v6a3 3 0 1 0 6 0V9H9z')}</Svg>;
+    case 'shield':
+      return <Svg {...dim}>{p('M12 3L4 7v5c0 4.4 3.4 8.5 8 9.5 4.6-1 8-5.1 8-9.5V7z')}</Svg>;
     case 'eye':
       return <Svg {...dim}>{p('M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z')}{sc(12,12,3)}</Svg>;
     case 'film':
