@@ -42,6 +42,13 @@ PLAN_DETAILS_SCHEMA = {
 }
 
 
+class PlanUpdate(BaseModel):
+    title: str | None = None
+    start_datetime: datetime | None = None
+    end_datetime: datetime | None = None
+    details: dict = {}
+
+
 class PlanResponse(BaseModel):
     id: UUID
     trip_id: UUID
