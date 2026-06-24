@@ -8,7 +8,7 @@
 | Backend | FastAPI (Python) |
 | Database | PostgreSQL (Aurora) |
 | Auth | AWS Auth |
-| Booking Text Parsing | In-house regex parsing + Tesseract OCR (pytesseract) |
+| Booking Text Parsing Pipeline | Apple Vision OCR Parsing + Regex (deterministic) + Apple intelligence on-device text parsing (nondeterministic) |
 | Deployment | Justfiles | Hermit | Terraform | Docker Compose | NPM |
 | Type Sync | openapi-typescript (FastAPI schema → RN types) |
 
