@@ -1,0 +1,48 @@
+6:48 4
+X
+Enterprise Rental Agreement 1QLXF...
+Rental Agreement # 1QLXFY
+enterprise
+Renter Information
+Renter Name
+ANKIT GOSWAMI
+Renter Address
+NEW YORK, NY 10044
+USA
+Vehicle Information
+CLA
+Licence #: KS23GXA
+State/Province: GB
+Unit #: 8D7CTO
+Vehicle #: PN371548
+Vehicle Class Driven
+Premium 4/5-Door/Automatic/Air
+Vehicle Class Charged
+Compact Elite 5-Door/Automatic/Air
+Odometer Mileage/Kilometres
+Starting: 3548
+Ending: 4360
+Total: 812
+Fuel
+Starting: 1/2
+Ending: 5/8
+Thank you for renting with
+Enterprise Rent-A-Car
+We appreciate your business!
+This email was automatically generated
+from an unattended mailbox, so please do
+not reply to this email.
+If vou have any questions about vour
+rental. please view our Freauently Asked
+Questions or send us a secured message
+by visiting our Support Centre
+Trip Information
+Pickup
+* Saturday, 19 August 2023
+O 09:03
+INVERNESS
+4 SEAFIELD ROAD
+INVERNESS
+INVERNESS, HIGHLAND IV1 1SG
+GBR
+Return
