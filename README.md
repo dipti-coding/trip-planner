@@ -34,7 +34,6 @@ just ping    # verify the stack via GET /ping
 | [technical-tradeoffs.md](technical-tradeoffs.md) | Running log of architectural decisions — the options evaluated and the rationale behind each choice (auth, parsing, persistence, etc.). |
 | [DEV_README.md](DEV_README.md) | Developer setup guide — prerequisites and end-to-end instructions for getting the local stack running and verified. |
 | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Running log of issues hit during development and how they were resolved. Check here when the local environment misbehaves. |
-| [PROGRESS.md](PROGRESS.md) | Development progress tracker — checklist of completed and pending work, organized by week. |
 | [CLAUDE.md](CLAUDE.md) | Project conventions and UI design-system rules (sourced from `/designs/PlanMyTrip.html` and `mobile/theme.ts`). |
 
 ## Project Structure
