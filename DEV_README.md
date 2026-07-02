@@ -476,6 +476,47 @@ The pre-parsed `PlanCreate` body is `POST`ed to `POST /trips/{id}/plans/from-par
 
 ---
 
+## Screenshot Booking Parser — Tests
+
+A characterization corpus exercises the full `parseBooking` pipeline (classify → per-domain extract → filter) against **real OCR dumps** from booking screenshots. The on-device LLM (`BookingParserModule`, FoundationModels) is device-only, so the tests run on Node with a **content-driven mock**: it reads each stage's prompt to decide which fields are being asked for and answers from each fixture's canonical data. Assertions are on the final parsed output, never on LLM call count or sequence.
+
+**Run from the `mobile/` directory:**
+
+```bash
+cd mobile
+
+# Run the booking corpus only
+npx jest utils/booking
+
+# Run a single fixture by name
+npx jest utils/booking -t "flight-2-qatar"
+
+# Run the whole mobile test suite
+npm test
+```
+
+Expected:
+
+```
+Test Suites: 1 passed, 1 total
+Tests:       8 passed, 8 total
+```
+
+> The pipeline logs each stage to the console, so test output is verbose — that's expected. A green summary at the end is what matters.
+
+**Layout** (under `mobile/utils/booking/`):
+
+| Path | What it holds |
+|---|---|
+| `__fixtures__/ocr/*.txt` | Raw OCR dumps, one per screenshot (flight, hotel, car, restaurant, activity) |
+| `__fixtures__/corpus.ts` | Per-fixture `canonical` data (mock answers) + `expected` parsed output |
+| `__fixtures__/llmMock.ts` | The content-driven LLM mock; installs `NativeModules.BookingParserModule` |
+| `__tests__/booking.golden.test.ts` | Runs the corpus through `parseBooking` and asserts |
+
+**Adding a fixture:** drop the OCR text in `__fixtures__/ocr/<name>.txt`, then add an entry to `CORPUS` in `corpus.ts` with the `ocrFile`, the `type`, the `canonical` data the mock should return (object — or array for multi-leg flights — or `generic` for the native single-stage path), and the `expected` plans.
+
+---
+
 ## Testing on a Physical Device
 
 The **screenshot booking parser** (on-device OCR + Apple Intelligence) only runs on a real device — it is disabled on the simulator. To test it end-to-end against a local server:

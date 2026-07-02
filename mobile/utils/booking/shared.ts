@@ -5,13 +5,7 @@ const {BookingParserModule} = NativeModules;
 
 export const MAX_OCR_CHARS = 3000;
 
-export type ParsedPlan = {
-  type: string;
-  title: string;
-  start_datetime?: string;
-  end_datetime?: string;
-  details: Record<string, string>;
-};
+export type {ParsedPlan} from './core/types';
 
 export function truncate(text: string): string {
   return text.length > MAX_OCR_CHARS ? text.slice(0, MAX_OCR_CHARS) : text;

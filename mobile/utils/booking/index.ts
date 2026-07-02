@@ -1,31 +1,24 @@
-import {runPrompt, truncate, extractJSON, filterDetailsForType} from './shared';
-import type {ParsedPlan} from './shared';
-import {parseFlightBooking} from './flight/parser';
-import {parseHotelBooking} from './hotel/parser';
-import {parseCarBooking} from './car/parser';
-import {parseGenericBooking} from './generic/parser';
+import type {ParsedPlan, PipelineContext} from './core/types';
+import {KeywordClassifierStage, CLASSIFIER_RULES} from './stages/keywordClassifier';
+import {LlmClassifierStage} from './stages/llmClassifier';
+import {getPipeline} from './pipelines';
 
-const VALID_TYPES = ['Flight', 'Hotel', 'CarReservation', 'Cruise', 'Ferry', 'RailwayRide', 'BusRide', 'Restaurant', 'Activity', 'Meeting'];
+export type {ParsedPlan};
 
-async function detectPlanType(text: string): Promise<string> {
-  const raw = await runPrompt(
-    'You are a travel booking classifier. Reply with a single word only.',
-    `Classify this booking confirmation. Reply with exactly one word from this list:\n${VALID_TYPES.join(', ')}\n\nClassification rules:\n- Flight: must mention an airline, airport code, or flight number (e.g. AA271). "Journey" or travel-themed language alone is not enough.\n- Activity: shows, concerts, theater, sporting events, attractions, tours, theme parks, entertainment tickets.\n- Hotel: accommodation check-in/check-out booking.\n- Restaurant: dining reservation.\n- CarReservation: car rental pickup/dropoff.\n- RailwayRide/BusRide/Ferry/Cruise: the named transport type only.\n- Meeting: business or personal appointment.\n- When in doubt, prefer Activity over Flight.\n\nText:\n${truncate(text)}`,
-  );
-  const word = raw.trim().split(/\s/)[0] ?? '';
-  return VALID_TYPES.includes(word) ? word : 'Activity';
-}
-
+// Orchestrator: classify (deterministic keywords → LLM fallback), then run the
+// registered pipeline for that type. The pipeline's ValidationStage leaves the final
+// ParsedPlan[] (each with `missing`) on ctx.meta.plans. Adding a domain touches only
+// the pipeline registry, never this function.
 export async function parseBooking(ocrText: string, tripYear: string): Promise<ParsedPlan[]> {
-  const type = await detectPlanType(ocrText);
-  console.log('[BookingPipeline] detected type:', type);
+  const ctx: PipelineContext = {text: ocrText, tripYear, items: [], meta: {}};
 
-  let plans: ParsedPlan[];
-  switch (type) {
-    case 'Flight':         plans = await parseFlightBooking(ocrText, tripYear); break;
-    case 'Hotel':          plans = await parseHotelBooking(ocrText, tripYear); break;
-    case 'CarReservation': plans = await parseCarBooking(ocrText, tripYear); break;
-    default:               plans = await parseGenericBooking(ocrText, tripYear, type); break;
-  }
-  return plans.map(p => ({...p, details: filterDetailsForType(p.details ?? {}, p.type)}));
+  const classifier = KeywordClassifierStage({
+    rules: CLASSIFIER_RULES,
+    fallback: LlmClassifierStage(),
+  });
+  await classifier.run(ctx);
+  console.log('[BookingPipeline] detected type:', ctx.type);
+
+  const result = await getPipeline(ctx.type).run(ctx);
+  return (result.meta.plans as ParsedPlan[] | undefined) ?? [];
 }
